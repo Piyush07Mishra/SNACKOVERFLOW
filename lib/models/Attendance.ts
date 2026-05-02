@@ -6,6 +6,11 @@ const AttendanceSchema = new mongoose.Schema({
   status: { type: String, enum: ['Present', 'Absent', 'Half_Day'], default: 'Present' },
   checkIn: { type: Date },
   checkOut: { type: Date },
+  breaks: [{
+    start: { type: Date },
+    end: { type: Date },
+  }],
+  totalWorkingHours: { type: Number, default: 0 },
 }, { timestamps: true });
 
 // Ensure one attendance per user per day

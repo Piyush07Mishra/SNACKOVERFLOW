@@ -22,6 +22,8 @@ export default async function PayrollPage() {
     userName: rec.user?.name || "Unknown",
     month: rec.month,
     basicSalary: rec.basicSalary,
+    payableDays: rec.payableDays,
+    unpaidLeaves: rec.unpaidLeaves,
     pfDeduction: rec.pfDeduction,
     professionalTax: rec.professionalTax,
     totalEarnings: rec.totalEarnings,

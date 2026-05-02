@@ -19,6 +19,7 @@ const UserSchema = new mongoose.Schema({
     bankName: { type: String, default: '' },
     accountNumber: { type: String, default: '' },
     ifscCode: { type: String, default: '' },
+    branchName: { type: String, default: '' },
   },
   salary: {
     basic: { type: Number, default: 0 },
