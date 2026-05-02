@@ -1,0 +1,55 @@
+/* Override shadcn dialog with maximum specificity */
+.payroll-modal {
+  width: 60vw !important;
+  max-width: 90vw !important;
+  min-width: 60vw !important;
+}
+
+/* Target Radix dialog content specifically */
+[data-radix-dialog-content].payroll-modal {
+  width: 60vw !important;
+  max-width: 90vw !important;
+  min-width: 60vw !important;
+}
+
+/* Override any dialog content styles */
+[data-radix-dialog-content] {
+  width: 60vw !important;
+  max-width: 90vw !important;
+  min-width: 60vw !important;
+}
+
+/* Target dialog portal */
+[data-radix-dialog-portal] [data-radix-dialog-content] {
+  width: 60vw !important;
+  max-width: 90vw !important;
+  min-width: 60vw !important;
+}
+
+/* Target dialog overlay */
+[data-radix-dialog-overlay] + [data-radix-dialog-content] {
+  width: 60vw !important;
+  max-width: 90vw !important;
+  min-width: 60vw !important;
+}
+
+/* Global override for any dialog content */
+div[data-radix-dialog-content] {
+  width: 60vw !important;
+  max-width: 90vw !important;
+  min-width: 60vw !important;
+}
+
+/* Additional override for modal content */
+.modal-content {
+  width: 60vw !important;
+  max-width: 90vw !important;
+  min-width: 60vw !important;
+}
+
+/* Override any max-width: 32rem or similar */
+[class*="DialogContent"] {
+  width: 60vw !important;
+  max-width: 90vw !important;
+  min-width: 60vw !important;
+}

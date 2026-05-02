@@ -1,6 +1,8 @@
 import dbConnect from "@/lib/mongodb";
 import { Payroll } from "@/lib/models/Payroll";
 import { User } from "@/lib/models/User";
+import { Attendance } from "@/lib/models/Attendance";
+import { Leave } from "@/lib/models/Leave";
 import { auth } from "@/auth";
 import { PayrollClient } from "./client";
 import { PayrollEmployeeClient } from "./employee-client";
@@ -13,25 +15,45 @@ export default async function PayrollPage() {
 
   await dbConnect();
 
-  // Admin/Payroll Officer view - see all payroll records
+  // Admin/Payroll Officer view - see all employees
   if (["Admin", "Payroll_Officer"].includes(userRole)) {
     const currentMonth = format(new Date(), "yyyy-MM");
-    const payrollRecords = await Payroll.find({ month: currentMonth }).populate("user", "name email").lean();
+    
+    // Fetch all employees (excluding Admins)
+    const employees = await User.find({ role: { $ne: 'Admin' } }).lean();
+    
+    // Fetch payroll records for current month
+    const payrollRecords = await Payroll.find({ month: currentMonth }).lean();
+    
+    // Create a map for quick payroll lookup
+    const payrollMap = new Map(
+      payrollRecords.map((rec: any) => [rec.user.toString(), rec])
+    );
 
-    const serializedRecords = payrollRecords.map((rec: any) => ({
-      id: rec._id.toString(),
-      userName: rec.user?.name || "Unknown",
-      month: rec.month,
-      basicSalary: rec.basicSalary,
-      payableDays: rec.payableDays,
-      unpaidLeaves: rec.unpaidLeaves,
-      pfDeduction: rec.pfDeduction,
-      professionalTax: rec.professionalTax,
-      totalEarnings: rec.totalEarnings,
-      totalDeductions: rec.totalDeductions,
-      netSalary: rec.netSalary,
-      status: rec.status,
-    }));
+    const serializedEmployees = employees.map((emp: any) => {
+      const payroll = payrollMap.get(emp._id.toString());
+      return {
+        id: emp._id.toString(),
+        name: emp.name,
+        email: emp.email,
+        role: emp.role,
+        designation: emp.designation,
+        department: emp.department,
+        basicSalary: emp.basicSalary || 0,
+        payroll: payroll ? {
+          id: payroll._id.toString(),
+          month: payroll.month,
+          payableDays: payroll.payableDays,
+          unpaidLeaves: payroll.unpaidLeaves,
+          pfDeduction: payroll.pfDeduction,
+          professionalTax: payroll.professionalTax,
+          totalEarnings: payroll.totalEarnings,
+          totalDeductions: payroll.totalDeductions,
+          netSalary: payroll.netSalary,
+          status: payroll.status,
+        } : null,
+      };
+    });
 
     return (
       <div className="space-y-6">
@@ -42,7 +64,7 @@ export default async function PayrollPage() {
           </div>
         </div>
 
-        <PayrollClient records={serializedRecords} currentMonth={currentMonth} />
+        <PayrollClient employees={serializedEmployees} currentMonth={currentMonth} />
       </div>
     );
   }

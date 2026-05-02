@@ -4,12 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 
 interface PayrollChartsProps {
-  records: any[];
+  employees: any[];
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-export function PayrollCharts({ records }: PayrollChartsProps) {
+export function PayrollCharts({ employees }: PayrollChartsProps) {
+  // Convert employees to records format for compatibility
+  const records = employees
+    .filter(emp => emp.payroll)
+    .map(emp => ({
+      userName: emp.name,
+      basicSalary: emp.basicSalary,
+      netSalary: emp.payroll.netSalary,
+      status: emp.payroll.status,
+      pfDeduction: emp.payroll.pfDeduction,
+      professionalTax: emp.payroll.professionalTax,
+      totalDeductions: emp.payroll.totalDeductions,
+    }));
   // Salary distribution data
   const salaryRanges = [
     { range: '0-2k', count: 0, total: 0 },

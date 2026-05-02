@@ -2,25 +2,31 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { generatePayroll, processPayment } from "./actions";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Download } from "lucide-react";
+import { Download, Users, DollarSign, Calendar, TrendingUp } from "lucide-react";
 import { generatePayslipPDF, generatePayrollReportPDF } from "@/lib/pdfGenerator";
 import { PayrollStats } from "./payroll-stats";
 import { PayrollCharts } from "./payroll-charts";
+import { EmployeeWagesTab } from "./employee-wages-tab";
+import { EmployeePayslipTab } from "./employee-payslip-tab";
+import "./modal.css";
 
-export function PayrollClient({ records, currentMonth }: { records: any[], currentMonth: string }) {
+export function PayrollClient({ employees, currentMonth }: { employees: any[], currentMonth: string }) {
   const [loading, setLoading] = useState(false);
-  const [selectedPayslip, setSelectedPayslip] = useState<any>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   async function handleGenerate() {
     setLoading(true);
     try {
       await generatePayroll(currentMonth);
       toast.success("Payroll generated successfully");
+      window.location.reload(); // Reload to show updated data
     } catch (err: any) {
       toast.error(err.message || "Failed to generate payroll");
     } finally {
@@ -28,52 +34,91 @@ export function PayrollClient({ records, currentMonth }: { records: any[], curre
     }
   }
 
-  async function handlePayment(id: string) {
-    try {
-      await processPayment(id);
-      toast.success("Payment processed");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to process payment");
-    }
-  }
-
-  async function handleDownloadPayslip(record: any) {
-    try {
-      await generatePayslipPDF(record.userName, record.month, {
-        basicSalary: record.basicSalary,
-        payableDays: record.payableDays,
-        unpaidLeaves: record.unpaidLeaves,
-        pfDeduction: record.pfDeduction,
-        professionalTax: record.professionalTax,
-        totalEarnings: record.totalEarnings,
-        totalDeductions: record.totalDeductions,
-        netSalary: record.netSalary,
-        status: record.status,
-      });
-      toast.success("Payslip downloaded successfully!");
-    } catch (error) {
-      toast.error("Failed to download payslip");
-    }
-  }
-
   async function handleDownloadPayrollReport() {
     try {
-      generatePayrollReportPDF(records, `Payroll Report - ${currentMonth}`);
+      const payrollRecords = employees
+        .filter(emp => emp.payroll)
+        .map(emp => ({
+          userName: emp.name,
+          month: emp.payroll.month,
+          basicSalary: emp.basicSalary,
+          payableDays: emp.payroll.payableDays,
+          unpaidLeaves: emp.payroll.unpaidLeaves,
+          pfDeduction: emp.payroll.pfDeduction,
+          professionalTax: emp.payroll.professionalTax,
+          totalEarnings: emp.payroll.totalEarnings,
+          totalDeductions: emp.payroll.totalDeductions,
+          netSalary: emp.payroll.netSalary,
+          status: emp.payroll.status,
+        }));
+      
+      generatePayrollReportPDF(payrollRecords, `Payroll Report - ${currentMonth}`);
       toast.success("Report downloaded successfully!");
     } catch (error) {
       toast.error("Failed to download report");
     }
   }
 
+  const handleEmployeeClick = (employee: any) => {
+    setSelectedEmployee(employee);
+    setDetailModalOpen(true);
+  };
+
+  const processedEmployees = employees.filter(emp => emp.payroll);
+  const totalNetSalary = processedEmployees.reduce((sum, emp) => sum + emp.payroll.netSalary, 0);
+  const averageSalary = processedEmployees.length > 0 ? totalNetSalary / processedEmployees.length : 0;
+
   return (
     <div className="space-y-6">
-      {/* Statistics and Charts Section */}
-      {records.length > 0 && (
-        <>
-          <PayrollStats records={records} currentMonth={currentMonth} />
-          <PayrollCharts records={records} />
-        </>
-      )}
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{employees.length}</div>
+            <p className="text-xs text-muted-foreground">Active workforce</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Processed Payroll</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{processedEmployees.length}</div>
+            <p className="text-xs text-muted-foreground">For {currentMonth}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Payout</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalNetSalary.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Net salary amount</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Salary</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{Math.round(averageSalary).toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Per employee</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Section */}
+      {processedEmployees.length > 0 && <PayrollCharts employees={employees} />}
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-2">
@@ -86,76 +131,105 @@ export function PayrollClient({ records, currentMonth }: { records: any[], curre
         </Button>
       </div>
 
+      {/* Employee List */}
       <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Employee Name</TableHead>
-              <TableHead>Basic Salary</TableHead>
-              <TableHead>Net Salary</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {records.map((rec) => (
-              <TableRow key={rec.id}>
-                <TableCell className="font-medium">{rec.userName}</TableCell>
-                <TableCell>₹{rec.basicSalary}</TableCell>
-                <TableCell className="font-bold">₹{rec.netSalary}</TableCell>
-                <TableCell>
-                  <Badge variant={rec.status === "Paid" ? "default" : "secondary"}>{rec.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right flex justify-end gap-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" onClick={() => setSelectedPayslip(rec)}>View Payslip</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Payslip - {rec.userName}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className="font-semibold">Month:</div><div>{rec.month}</div>
-                          <div className="font-semibold">Payable Days:</div><div className="text-blue-600 font-bold">{rec.payableDays}</div>
-                          <div className="font-semibold">Unpaid Leaves:</div><div className="text-red-500">{rec.unpaidLeaves}</div>
-                          <div className="font-semibold border-t pt-2">Basic Salary:</div><div className="border-t pt-2">₹{rec.basicSalary}</div>
-                          <div className="font-semibold">PF Deduction (12%):</div><div>₹{rec.pfDeduction.toFixed(2)}</div>
-                          <div className="font-semibold">Professional Tax:</div><div>₹{rec.professionalTax}</div>
-                          <div className="font-semibold border-t pt-2">Earnings (Prorated):</div><div className="border-t pt-2">₹{rec.totalEarnings.toFixed(2)}</div>
-                          <div className="font-semibold text-red-500">Total Deductions:</div><div className="text-red-500">₹{rec.totalDeductions.toFixed(2)}</div>
-                          <div className="font-bold border-t pt-2 text-green-600 text-lg">Net Salary:</div><div className="font-bold border-t pt-2 text-green-600 text-lg">₹{rec.netSalary.toFixed(2)}</div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            className="flex-1 gap-2" 
-                            onClick={() => handleDownloadPayslip(rec)}
-                          >
-                            <Download className="h-4 w-4" />
-                            Download
-                          </Button>
-                          {rec.status !== "Paid" && (
-                            <Button className="flex-1" onClick={() => handlePayment(rec.id)}>Mark as Paid</Button>
-                          )}
-                        </div>
+        <div className="grid gap-4 p-4">
+          {employees.map((employee) => (
+            <Card 
+              key={employee.id} 
+              className="cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] border-border/50 bg-card/50 backdrop-blur-sm"
+              onClick={() => handleEmployeeClick(employee)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                      <span className="text-lg font-bold text-primary">
+                        {employee.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{employee.name}</h3>
+                      <p className="text-sm text-muted-foreground">{employee.designation || employee.role}</p>
+                      <p className="text-xs text-muted-foreground">{employee.department || 'General'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    {employee.payroll ? (
+                      <div className="space-y-1">
+                        <div className="font-bold text-green-600">₹{employee.payroll.netSalary.toLocaleString()}</div>
+                        <Badge variant={employee.payroll.status === "Paid" ? "default" : "secondary"}>
+                          {employee.payroll.status}
+                        </Badge>
                       </div>
-                    </DialogContent>
-                  </Dialog>
-                </TableCell>
-              </TableRow>
-            ))}
-            {records.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
-                  No payroll records found for {currentMonth}. Generate payroll to view.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Not processed</div>
+                        <Badge variant="outline">Pending</Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          
+          {employees.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No employees found. Generate payroll to view details.
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Employee Detail Modal */}
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="payroll-modal max-h-[95vh] overflow-hidden">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="flex items-center gap-3 text-lg">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-xl font-bold text-primary">
+                  {selectedEmployee?.name?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-lg">{selectedEmployee?.name}</div>
+                <div className="text-sm font-normal text-muted-foreground truncate">
+                  {selectedEmployee?.designation || selectedEmployee?.role}
+                </div>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedEmployee && (
+            <div className="h-[calc(95vh-8rem)] overflow-hidden">
+              <Tabs defaultValue="wages" className="h-full flex flex-col">
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="wages" className="text-sm">Daily Wages</TabsTrigger>
+                  <TabsTrigger value="payslip" className="text-sm">Payslip</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="wages" className="flex-1 overflow-hidden mt-0">
+                  <div className="h-full overflow-y-auto pr-2">
+                    <EmployeeWagesTab employee={selectedEmployee} currentMonth={currentMonth} />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="payslip" className="flex-1 overflow-hidden mt-0">
+                  <div className="h-full overflow-y-auto pr-2">
+                    <EmployeePayslipTab 
+                      employee={selectedEmployee} 
+                      currentMonth={currentMonth}
+                      onPaymentProcessed={() => window.location.reload()}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
