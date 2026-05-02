@@ -73,10 +73,21 @@ interface ProfileClientProps {
   initialData: ProfileData;
   isAdmin: boolean;
   canEditSalary: boolean;
+  canEditRole?: boolean;
+  canEditProfile?: boolean;
+  isOtherUserProfile?: boolean;
   userRole: string;
 }
 
-export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }: ProfileClientProps) {
+export function ProfileClient({ 
+  initialData, 
+  isAdmin, 
+  canEditSalary, 
+  canEditRole = false, 
+  canEditProfile = true,
+  isOtherUserProfile = false,
+  userRole 
+}: ProfileClientProps) {
   const [profileData, setProfileData] = useState<ProfileData>(initialData);
   const [isSaving, setIsSaving] = useState(false);
   const [salaryComponents, setSalaryComponents] = useState<SalaryComponent[]>(
@@ -254,9 +265,37 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
-        <p className="text-muted-foreground mt-2">Manage your personal and professional information</p>
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isOtherUserProfile ? `${profileData.name}'s Profile` : "My Profile"}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {isOtherUserProfile 
+              ? "View and manage employee information and settings" 
+              : "Manage your personal and professional information"}
+          </p>
+        </div>
+        
+        {isOtherUserProfile && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm">
+                <span className="font-semibold">Email:</span> {profileData.email}
+              </span>
+              {canEditRole && (
+                <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
+                  You can change this employee's role
+                </span>
+              )}
+              {canEditSalary && !canEditRole && (
+                <span className="text-xs bg-amber-200 text-amber-800 px-2 py-1 rounded">
+                  You can edit salary information
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="resume" className="space-y-4">
@@ -292,6 +331,8 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
                   <Input
                     value={profileData.name}
                     onChange={(e) => handleProfileChange("name", e.target.value)}
+                    disabled={!canEditProfile}
+                    className={!canEditProfile ? "bg-muted cursor-not-allowed" : ""}
                   />
                 </div>
                 <div className="space-y-2">
@@ -303,6 +344,8 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
                   <Input
                     value={profileData.jobPosition}
                     onChange={(e) => handleProfileChange("jobPosition", e.target.value)}
+                    disabled={!canEditProfile}
+                    className={!canEditProfile ? "bg-muted cursor-not-allowed" : ""}
                   />
                 </div>
                 <div className="space-y-2">
@@ -310,6 +353,8 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
                   <Input
                     value={profileData.mobileNumber}
                     onChange={(e) => handleProfileChange("mobileNumber", e.target.value)}
+                    disabled={!canEditProfile}
+                    className={!canEditProfile ? "bg-muted cursor-not-allowed" : ""}
                   />
                 </div>
                 <div className="space-y-2">
@@ -317,6 +362,8 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
                   <Input
                     value={profileData.company}
                     onChange={(e) => handleProfileChange("company", e.target.value)}
+                    disabled={!canEditProfile}
+                    className={!canEditProfile ? "bg-muted cursor-not-allowed" : ""}
                   />
                 </div>
                 <div className="space-y-2">
@@ -324,6 +371,8 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
                   <Input
                     value={profileData.department}
                     onChange={(e) => handleProfileChange("department", e.target.value)}
+                    disabled={!canEditProfile}
+                    className={!canEditProfile ? "bg-muted cursor-not-allowed" : ""}
                   />
                 </div>
                 <div className="space-y-2">
@@ -331,6 +380,8 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
                   <Input
                     value={profileData.manager}
                     onChange={(e) => handleProfileChange("manager", e.target.value)}
+                    disabled={!canEditProfile}
+                    className={!canEditProfile ? "bg-muted cursor-not-allowed" : ""}
                   />
                 </div>
                 <div className="space-y-2">
@@ -338,11 +389,16 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
                   <Input
                     value={profileData.location}
                     onChange={(e) => handleProfileChange("location", e.target.value)}
+                    disabled={!canEditProfile}
+                    className={!canEditProfile ? "bg-muted cursor-not-allowed" : ""}
                   />
                 </div>
-                {isAdmin && (
+                {canEditRole && (
                   <div className="space-y-2">
-                    <Label>User Role</Label>
+                    <Label className="flex items-center gap-2">
+                      User Role
+                      {isOtherUserProfile && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Admin Only</span>}
+                    </Label>
                     <Select value={profileData.role} onValueChange={(value) => handleProfileChange("role", value)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -442,7 +498,9 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
               <CardContent className="pt-6">
                 <p className={canEditSalary ? "text-sm text-blue-700" : "text-sm text-green-700"}>
                   {canEditSalary 
-                    ? "📝 You can edit salary components and configuration" 
+                    ? isOtherUserProfile
+                      ? "📝 You have permission to edit this employee's salary configuration"
+                      : "📝 You can edit salary components and configuration" 
                     : "👁️ You can view your salary structure. Contact HR or Admin to make changes."}
                 </p>
               </CardContent>

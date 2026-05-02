@@ -4,7 +4,11 @@ import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { ProfileClient } from "./client";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: { userId?: string };
+}) {
   const session = await auth();
 
   if (!session?.user?.email) {
@@ -12,23 +16,59 @@ export default async function ProfilePage() {
   }
 
   await connectDB();
-  const user = await User.findOne({ email: session.user.email }).lean();
+  const currentUser = await User.findOne({ email: session.user.email }).lean();
 
-  if (!user) {
+  if (!currentUser) {
     redirect("/login");
   }
 
-  const isAdmin = user.role === "Admin";
-  const isPayrollOfficer = user.role === "Payroll_Officer";
-  const canEditSalary = isAdmin || isPayrollOfficer;
-  const userRole = user.role;
+  const currentUserIsAdmin = currentUser.role === "Admin";
+  const currentUserIsPayrollOfficer = currentUser.role === "Payroll_Officer";
+  const isAdmin = currentUserIsAdmin;
+
+  // If userId is provided and user is Admin/Payroll Officer, fetch that user's profile
+  let viewingUser = currentUser;
+  let isOtherUserProfile = false;
+
+  if (searchParams.userId && (currentUserIsAdmin || currentUserIsPayrollOfficer)) {
+    const otherUser = await User.findById(searchParams.userId).lean();
+    if (otherUser) {
+      viewingUser = otherUser;
+      isOtherUserProfile = true;
+    }
+  }
+
+  // Determine edit permissions based on who is viewing
+  let canEditSalary = false;
+  let canEditRole = false;
+  let canEditProfile = false;
+
+  if (isOtherUserProfile) {
+    // Viewing another user's profile
+    if (currentUserIsAdmin) {
+      canEditRole = true;
+      canEditSalary = true;
+      canEditProfile = true;
+    } else if (currentUserIsPayrollOfficer) {
+      canEditSalary = true; // Payroll officers can only edit salary
+    }
+  } else {
+    // Viewing own profile
+    canEditProfile = true;
+    if (currentUserIsAdmin || currentUserIsPayrollOfficer) {
+      canEditSalary = true;
+    }
+  }
 
   return (
     <ProfileClient
-      initialData={JSON.parse(JSON.stringify(user))}
+      initialData={JSON.parse(JSON.stringify(viewingUser))}
       isAdmin={isAdmin}
       canEditSalary={canEditSalary}
-      userRole={userRole}
+      canEditRole={canEditRole}
+      canEditProfile={canEditProfile}
+      isOtherUserProfile={isOtherUserProfile}
+      userRole={currentUser.role}
     />
   );
 }

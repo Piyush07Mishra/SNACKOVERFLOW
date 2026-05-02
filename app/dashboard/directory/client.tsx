@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import Link from "next/link";
+import { Edit, Eye } from "lucide-react";
 import { createEmployee } from "./actions";
 
 export function DirectoryClient({ employees, canManage }: { employees: any[], canManage: boolean }) {
@@ -102,6 +104,7 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
               <TableHead>Role</TableHead>
               <TableHead>Department</TableHead>
               <TableHead>Designation</TableHead>
+              {canManage && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -116,6 +119,16 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
                 </TableCell>
                 <TableCell>{emp.department || "-"}</TableCell>
                 <TableCell>{emp.designation || "-"}</TableCell>
+                {canManage && (
+                  <TableCell className="text-right">
+                    <Link href={`/dashboard/profile?userId=${emp.id}`}>
+                      <Button size="sm" variant="outline" className="gap-2">
+                        <Edit className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    </Link>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
