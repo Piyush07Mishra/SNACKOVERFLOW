@@ -83,7 +83,7 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
         basicSalary: Number(formData.get("basicSalary") || 0),
       };
 
-      const response = await fetch("/api/user/profile", {
+      const response = await fetch("/api/admin/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

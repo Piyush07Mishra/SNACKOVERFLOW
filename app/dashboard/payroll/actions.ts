@@ -82,7 +82,7 @@ export async function generatePayroll(month: string) {
     const proratedSalary = (basicSalary / totalDaysInMonth) * payableDays;
     
     const pfDeduction = proratedSalary * 0.12;
-    const professionalTax = 200; // Flat PT
+    const professionalTax = (200 / totalDaysInMonth) * payableDays; // Prorated PT
 
     const totalDeductions = pfDeduction + professionalTax;
     const netSalary = Math.max(0, proratedSalary - totalDeductions);

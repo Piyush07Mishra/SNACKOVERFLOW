@@ -60,9 +60,15 @@ export function getTotalEarnings(components: SalaryComponent[]): number {
 /**
  * Get total deductions (PF + Professional Tax)
  */
-export function getTotalDeductions(totalEarnings: number, config: SalaryConfigData): number {
+export function getTotalDeductions(totalEarnings: number, config: SalaryConfigData, payableDays?: number, totalDaysInMonth?: number): number {
   const pf = (config.pfRate / 100) * totalEarnings;
-  const pt = config.professionalTax;
+  let pt = config.professionalTax;
+  
+  // Prorate professional tax if payable days and total days are provided
+  if (payableDays && totalDaysInMonth && payableDays < totalDaysInMonth) {
+    pt = (config.professionalTax / totalDaysInMonth) * payableDays;
+  }
+  
   return Math.round((pf + pt) * 100) / 100;
 }
 
@@ -78,11 +84,19 @@ export function getNetSalary(totalEarnings: number, totalDeductions: number): nu
  */
 export function getSalaryBreakdown(
   components: SalaryComponent[],
-  config: SalaryConfigData
+  config: SalaryConfigData,
+  payableDays?: number,
+  totalDaysInMonth?: number
 ) {
   const totalEarnings = getTotalEarnings(components);
   const pf = Math.round((config.pfRate / 100) * totalEarnings * 100) / 100;
-  const pt = config.professionalTax;
+  let pt = config.professionalTax;
+  
+  // Prorate professional tax if payable days and total days are provided
+  if (payableDays && totalDaysInMonth && payableDays < totalDaysInMonth) {
+    pt = Math.round((config.professionalTax / totalDaysInMonth) * payableDays * 100) / 100;
+  }
+  
   const totalDeductions = pf + pt;
   const netSalary = totalEarnings - totalDeductions;
 
