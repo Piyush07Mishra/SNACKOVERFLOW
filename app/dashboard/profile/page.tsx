@@ -19,6 +19,16 @@ export default async function ProfilePage() {
   }
 
   const isAdmin = user.role === "Admin";
+  const isPayrollOfficer = user.role === "Payroll_Officer";
+  const canEditSalary = isAdmin || isPayrollOfficer;
+  const userRole = user.role;
 
-  return <ProfileClient initialData={JSON.parse(JSON.stringify(user))} isAdmin={isAdmin} />;
+  return (
+    <ProfileClient
+      initialData={JSON.parse(JSON.stringify(user))}
+      isAdmin={isAdmin}
+      canEditSalary={canEditSalary}
+      userRole={userRole}
+    />
+  );
 }

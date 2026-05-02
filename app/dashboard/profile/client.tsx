@@ -56,9 +56,11 @@ interface AdminAccessData {
 interface ProfileClientProps {
   initialData: ProfileData;
   isAdmin: boolean;
+  canEditSalary: boolean;
+  userRole: string;
 }
 
-export function ProfileClient({ initialData, isAdmin }: ProfileClientProps) {
+export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }: ProfileClientProps) {
   const [profileData, setProfileData] = useState<ProfileData>(initialData);
   const [isSaving, setIsSaving] = useState(false);
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
@@ -264,6 +266,22 @@ export function ProfileClient({ initialData, isAdmin }: ProfileClientProps) {
                     onChange={(e) => handleProfileChange("location", e.target.value)}
                   />
                 </div>
+                {isAdmin && (
+                  <div className="space-y-2">
+                    <Label>User Role</Label>
+                    <Select value={profileData.role} onValueChange={(value) => handleProfileChange("role", value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Employee">Employee</SelectItem>
+                        <SelectItem value="Admin">Admin</SelectItem>
+                        <SelectItem value="HR_Officer">HR Officer</SelectItem>
+                        <SelectItem value="Payroll_Officer">Payroll Officer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <Button onClick={saveProfile} disabled={isSaving} className="w-full">
                 {isSaving ? "Saving..." : "Save Changes"}
@@ -347,6 +365,11 @@ export function ProfileClient({ initialData, isAdmin }: ProfileClientProps) {
           <Card>
             <CardHeader>
               <CardTitle>Salary Information</CardTitle>
+              {!canEditSalary && (
+                <p className="text-sm text-amber-600 mt-2">
+                  Salary information can only be edited by Admin or Payroll Officer
+                </p>
+              )}
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -356,6 +379,8 @@ export function ProfileClient({ initialData, isAdmin }: ProfileClientProps) {
                     type="number"
                     value={profileData.basicSalary}
                     onChange={(e) => handleProfileChange("basicSalary", Number(e.target.value))}
+                    disabled={!canEditSalary}
+                    className={!canEditSalary ? "bg-muted" : ""}
                   />
                 </div>
                 <div className="space-y-2">
@@ -363,10 +388,12 @@ export function ProfileClient({ initialData, isAdmin }: ProfileClientProps) {
                   <Input
                     value={profileData.salaryStructure}
                     onChange={(e) => handleProfileChange("salaryStructure", e.target.value)}
+                    disabled={!canEditSalary}
+                    className={!canEditSalary ? "bg-muted" : ""}
                   />
                 </div>
               </div>
-              <Button onClick={saveProfile} disabled={isSaving} className="w-full">
+              <Button onClick={saveProfile} disabled={isSaving || !canEditSalary} className="w-full">
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </CardContent>
