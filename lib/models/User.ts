@@ -9,6 +9,12 @@ const UserSchema = new mongoose.Schema({
   department: { type: String, default: '' },
   joiningDate: { type: Date, default: Date.now },
   basicSalary: { type: Number, default: 0 },
+  bankDetails: {
+    bankName: { type: String, default: '' },
+    accountNumber: { type: String, default: '' },
+    ifscCode: { type: String, default: '' },
+    branchName: { type: String, default: '' },
+  }
 }, { timestamps: true });
 
 export const User = mongoose.models.User || mongoose.model('User', UserSchema);
