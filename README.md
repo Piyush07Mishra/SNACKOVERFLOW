@@ -6,7 +6,7 @@ EmPay is a Smart Human Resource Management System built with Next.js and shadcn/
 
 - Employee dashboard and attendance tracking
 - Directory and employee management
-- Payroll overview and salary tracking
+- Payroll overview and salary tracking (along with custom payroll logic)
 - Time-off request management
 - Authentication and user registration
 
