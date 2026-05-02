@@ -73,12 +73,14 @@ export function PayrollClient({ records, currentMonth }: { records: any[], curre
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div className="font-semibold">Month:</div><div>{rec.month}</div>
-                          <div className="font-semibold">Basic Salary:</div><div>${rec.basicSalary}</div>
-                          <div className="font-semibold">PF Deduction (12%):</div><div>${rec.pfDeduction}</div>
+                          <div className="font-semibold">Payable Days:</div><div className="text-blue-600 font-bold">{rec.payableDays}</div>
+                          <div className="font-semibold">Unpaid Leaves:</div><div className="text-red-500">{rec.unpaidLeaves}</div>
+                          <div className="font-semibold border-t pt-2">Basic Salary:</div><div className="border-t pt-2">${rec.basicSalary}</div>
+                          <div className="font-semibold">PF Deduction (12%):</div><div>${rec.pfDeduction.toFixed(2)}</div>
                           <div className="font-semibold">Professional Tax:</div><div>${rec.professionalTax}</div>
-                          <div className="font-semibold border-t pt-2">Total Earnings:</div><div className="border-t pt-2">${rec.totalEarnings}</div>
-                          <div className="font-semibold text-red-500">Total Deductions:</div><div className="text-red-500">${rec.totalDeductions}</div>
-                          <div className="font-bold border-t pt-2 text-green-600 text-lg">Net Salary:</div><div className="font-bold border-t pt-2 text-green-600 text-lg">${rec.netSalary}</div>
+                          <div className="font-semibold border-t pt-2">Earnings (Prorated):</div><div className="border-t pt-2">${rec.totalEarnings.toFixed(2)}</div>
+                          <div className="font-semibold text-red-500">Total Deductions:</div><div className="text-red-500">${rec.totalDeductions.toFixed(2)}</div>
+                          <div className="font-bold border-t pt-2 text-green-600 text-lg">Net Salary:</div><div className="font-bold border-t pt-2 text-green-600 text-lg">${rec.netSalary.toFixed(2)}</div>
                         </div>
                         {rec.status !== "Paid" && (
                           <Button className="w-full" onClick={() => handlePayment(rec.id)}>Mark as Paid</Button>
