@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { loginAction } from "@/app/actions/auth";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,14 +19,21 @@ export default function LoginPage() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const result = await loginAction(formData);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
 
     if (result?.error) {
-      toast.error(result.error);
+      toast.error("Invalid credentials or user not found");
       setLoading(false);
-    } else {
+    } else if (result?.ok) {
       toast.success("Login successful");
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     }
   }
 
