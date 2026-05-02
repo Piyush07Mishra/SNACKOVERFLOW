@@ -166,12 +166,12 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
                 {canManage && (
                   <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
-                      <Link href={`/dashboard/profile?userId=${emp.id}`}>
+                      {/* <Link href={`/dashboard/profile?userId=${emp.id}`}>
                         <Button size="sm" variant="outline" className="gap-2">
                           <Edit className="h-4 w-4" />
                           Edit
                         </Button>
-                      </Link>
+                      </Link> */}
                       {emp.role !== "Admin" && (
                         <Button 
                           size="sm" 
