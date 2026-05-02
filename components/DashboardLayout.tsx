@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Users, CalendarDays, Clock, Banknote, Settings, LogOut, Menu } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, Clock, Banknote, Settings, LogOut, Menu, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,6 +23,7 @@ interface DashboardLayoutProps {
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Profile", href: "/dashboard/profile", icon: UserIcon },
   { name: "Directory", href: "/dashboard/directory", icon: Users },
   { name: "Attendance", href: "/dashboard/attendance", icon: Clock },
   { name: "Time Off", href: "/dashboard/timeoff", icon: CalendarDays },
@@ -73,9 +74,9 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[240px] sm:w-[300px]">
+        <SheetContent side="left" className="w-60 sm:w-75">
           <div className="flex flex-col h-full gap-4">
-            <div className="flex h-14 items-center border-b px-4 lg:h-[60px]">
+            <div className="flex h-14 items-center border-b px-4 lg:h-15">
               <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                 <span className="text-xl text-primary">EmPay</span>
               </Link>
@@ -91,9 +92,9 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
       </Sheet>
 
       {/* Desktop Sidebar */}
-      <div className="hidden border-r bg-muted/40 md:block md:w-64 lg:w-[280px]">
+      <div className="hidden border-r bg-muted/40 md:block md:w-64 lg:w-70">
         <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+          <div className="flex h-14 items-center border-b px-4 lg:h-15 lg:px-6">
             <Link href="/dashboard" className="flex items-center gap-2 font-bold">
               <span className="text-2xl text-primary">EmPay</span>
             </Link>
