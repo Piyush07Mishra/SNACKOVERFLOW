@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Edit, Eye } from "lucide-react";
+import { Edit, Download } from "lucide-react";
 import { createEmployee } from "./actions";
+import { generateEmployeeReportPDF } from "@/lib/pdfGenerator";
 
 export function DirectoryClient({ employees, canManage }: { employees: any[], canManage: boolean }) {
   const [open, setOpen] = useState(false);
@@ -41,10 +42,27 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
     }
   }
 
+  function handleDownloadReport() {
+    try {
+      generateEmployeeReportPDF(employees, "Employee Directory Report");
+      toast.success("Report downloaded successfully!");
+    } catch (error) {
+      toast.error("Failed to download report");
+    }
+  }
+
   return (
     <div className="space-y-4">
-      {canManage && (
-        <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button 
+          variant="outline" 
+          onClick={handleDownloadReport} 
+          className="gap-2"
+        >
+          <Download className="h-4 w-4" />
+          Download Report
+        </Button>
+        {canManage && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button>Add Employee</Button>
@@ -92,8 +110,8 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
               </form>
             </DialogContent>
           </Dialog>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="rounded-md border">
         <Table>

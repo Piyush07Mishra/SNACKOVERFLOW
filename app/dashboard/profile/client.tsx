@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { FileText, Lock, DollarSign, Landmark, Trash2, Plus } from "lucide-react";
+import { FileText, Lock, DollarSign, Landmark, Trash2, Plus, Download } from "lucide-react";
 import { calculateSalaryComponents, getTotalEarnings, getNetSalary } from "@/lib/salaryCalculations";
+import { generatePDFFromHTML } from "@/lib/pdfGenerator";
 
 interface SalaryComponent {
   name: string;
@@ -263,6 +264,16 @@ export function ProfileClient({
     }
   };
 
+  const handleDownloadProfile = async () => {
+    try {
+      await generatePDFFromHTML("profile-content", `${profileData.name}-profile.pdf`);
+      toast.success("Profile downloaded successfully!");
+    } catch (error) {
+      console.error("Error downloading profile:", error);
+      toast.error("Failed to download profile");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -298,8 +309,20 @@ export function ProfileClient({
         )}
       </div>
 
-      <Tabs defaultValue="resume" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+      <div className="flex justify-end">
+        <Button 
+          variant="outline" 
+          onClick={handleDownloadProfile}
+          className="gap-2"
+        >
+          <Download className="h-4 w-4" />
+          Download Profile
+        </Button>
+      </div>
+
+      <div id="profile-content" className="space-y-6">
+        <Tabs defaultValue="resume" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="resume" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Resume
@@ -912,6 +935,7 @@ export function ProfileClient({
           </div>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

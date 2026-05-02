@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, DollarSign, Download, FileText } from "lucide-react";
 import { format, parse } from "date-fns";
+import { generatePayslipPDF } from "@/lib/pdfGenerator";
+import { toast } from "sonner";
 
 interface PayrollRecord {
   id: string;
@@ -24,7 +26,7 @@ interface PayrollRecord {
   createdAt: string;
 }
 
-export function PayrollEmployeeClient({ records }: { records: PayrollRecord[] }) {
+export function PayrollEmployeeClient({ records, employeeName = "Employee" }: { records: PayrollRecord[], employeeName?: string }) {
   const [selectedPayslip, setSelectedPayslip] = useState<PayrollRecord | null>(null);
 
   const formatMonth = (monthStr: string) => {
@@ -36,43 +38,24 @@ export function PayrollEmployeeClient({ records }: { records: PayrollRecord[] })
     }
   };
 
-  const handleDownloadPayslip = (record: PayrollRecord) => {
-    // Generate PDF or document content
-    const content = `
-PAYSLIP - ${formatMonth(record.month)}
-
-=====================================
-EARNINGS
-=====================================
-Basic Salary:           ₹${record.basicSalary.toFixed(2)}
-Payable Days:           ${record.payableDays}
-Unpaid Leaves:          ${record.unpaidLeaves}
-
-Prorated Earnings:      ₹${record.totalEarnings.toFixed(2)}
-
-=====================================
-DEDUCTIONS
-=====================================
-PF Deduction (12%):     ₹${record.pfDeduction.toFixed(2)}
-Professional Tax:       ₹${record.professionalTax.toFixed(2)}
-
-Total Deductions:       ₹${record.totalDeductions.toFixed(2)}
-
-=====================================
-NET SALARY
-=====================================
-Net Salary:             ₹${record.netSalary.toFixed(2)}
-
-Status:                 ${record.status}
-    `;
-
-    const element = document.createElement("a");
-    element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(content));
-    element.setAttribute("download", `payslip-${record.month}.txt`);
-    element.style.display = "none";
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+  const handleDownloadPayslip = async (record: PayrollRecord) => {
+    try {
+      await generatePayslipPDF(employeeName, record.month, {
+        basicSalary: record.basicSalary,
+        payableDays: record.payableDays,
+        unpaidLeaves: record.unpaidLeaves,
+        pfDeduction: record.pfDeduction,
+        professionalTax: record.professionalTax,
+        totalEarnings: record.totalEarnings,
+        totalDeductions: record.totalDeductions,
+        netSalary: record.netSalary,
+        status: record.status,
+      });
+      toast.success("Payslip downloaded successfully!");
+    } catch (error) {
+      console.error("Error downloading payslip:", error);
+      toast.error("Failed to download payslip");
+    }
   };
 
   return (

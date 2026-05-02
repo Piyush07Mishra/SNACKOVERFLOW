@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { generatePayroll, processPayment } from "./actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Download } from "lucide-react";
+import { generatePayslipPDF, generateEmployeeReportPDF } from "@/lib/pdfGenerator";
 
 export function PayrollClient({ records, currentMonth }: { records: any[], currentMonth: string }) {
   const [loading, setLoading] = useState(false);
@@ -33,9 +35,41 @@ export function PayrollClient({ records, currentMonth }: { records: any[], curre
     }
   }
 
+  async function handleDownloadPayslip(record: any) {
+    try {
+      await generatePayslipPDF(record.userName, record.month, {
+        basicSalary: record.basicSalary,
+        payableDays: record.payableDays,
+        unpaidLeaves: record.unpaidLeaves,
+        pfDeduction: record.pfDeduction,
+        professionalTax: record.professionalTax,
+        totalEarnings: record.totalEarnings,
+        totalDeductions: record.totalDeductions,
+        netSalary: record.netSalary,
+        status: record.status,
+      });
+      toast.success("Payslip downloaded successfully!");
+    } catch (error) {
+      toast.error("Failed to download payslip");
+    }
+  }
+
+  async function handleDownloadPayrollReport() {
+    try {
+      generateEmployeeReportPDF(records, `Payroll Report - ${currentMonth}`);
+      toast.success("Report downloaded successfully!");
+    } catch (error) {
+      toast.error("Failed to download report");
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button onClick={handleDownloadPayrollReport} variant="outline" className="gap-2">
+          <Download className="h-4 w-4" />
+          Download Report
+        </Button>
         <Button onClick={handleGenerate} disabled={loading}>
           {loading ? "Generating..." : "Generate Monthly Payroll"}
         </Button>
@@ -82,9 +116,19 @@ export function PayrollClient({ records, currentMonth }: { records: any[], curre
                           <div className="font-semibold text-red-500">Total Deductions:</div><div className="text-red-500">${rec.totalDeductions.toFixed(2)}</div>
                           <div className="font-bold border-t pt-2 text-green-600 text-lg">Net Salary:</div><div className="font-bold border-t pt-2 text-green-600 text-lg">${rec.netSalary.toFixed(2)}</div>
                         </div>
-                        {rec.status !== "Paid" && (
-                          <Button className="w-full" onClick={() => handlePayment(rec.id)}>Mark as Paid</Button>
-                        )}
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1 gap-2" 
+                            onClick={() => handleDownloadPayslip(rec)}
+                          >
+                            <Download className="h-4 w-4" />
+                            Download
+                          </Button>
+                          {rec.status !== "Paid" && (
+                            <Button className="flex-1" onClick={() => handlePayment(rec.id)}>Mark as Paid</Button>
+                          )}
+                        </div>
                       </div>
                     </DialogContent>
                   </Dialog>

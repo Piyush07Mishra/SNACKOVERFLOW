@@ -75,7 +75,7 @@ export default async function PayrollPage() {
         </div>
       </div>
 
-      <PayrollEmployeeClient records={serializedEmployeeRecords} />
+      <PayrollEmployeeClient records={serializedEmployeeRecords} employeeName={currentUser?.name || "Employee"} />
     </div>
   );
 }
