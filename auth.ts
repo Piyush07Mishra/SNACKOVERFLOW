@@ -9,17 +9,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        identifier: { label: "Login Id/Email", type: "text" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.identifier || !credentials?.password) {
           return null;
         }
 
         await dbConnect();
 
-        const user = await User.findOne({ email: credentials.email });
+        const identifier = credentials.identifier as string;
+        
+        const user = await User.findOne({
+          $or: [
+            { email: identifier },
+            { employeeId: identifier }
+          ]
+        });
 
         if (!user) {
           return null;
@@ -39,6 +46,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           email: user.email,
           role: user.role,
+          companyId: user.companyId.toString(),
+          employeeId: user.employeeId,
         };
       }
     })
@@ -48,6 +57,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        token.companyId = (user as any).companyId;
+        token.employeeId = (user as any).employeeId;
       }
       return token;
     },
@@ -55,6 +66,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         (session.user as any).role = token.role;
+        (session.user as any).companyId = token.companyId;
+        (session.user as any).employeeId = token.employeeId;
       }
       return session;
     }
