@@ -45,6 +45,8 @@ export async function generatePayroll(month: string) {
 
     let payableDays = 0;
     let unpaidLeaves = 0;
+    let totalWorkingHours = 0;
+    let overtimeHours = 0;
 
     const days = eachDayOfInterval({ start, end });
 
@@ -53,10 +55,23 @@ export async function generatePayroll(month: string) {
       const attendance = attendanceRecords.find(r => r.date === dateStr);
       
       if (attendance) {
+        // Add working hours from attendance
+        if (attendance.totalWorkingHours) {
+          totalWorkingHours += attendance.totalWorkingHours;
+          
+          // Calculate overtime (assuming 8 hours is standard work day)
+          const dayHours = attendance.totalWorkingHours;
+          if (dayHours > 8) {
+            overtimeHours += (dayHours - 8);
+          }
+        }
+        
         if (attendance.status === "Present") {
           payableDays += 1;
         } else if (attendance.status === "Half_Day") {
           payableDays += 0.5;
+        } else if (attendance.status === "Leave") {
+          // Leave is already handled in the leaves check below
         }
       } else {
         // No attendance record, check if it's an approved leave
@@ -69,11 +84,11 @@ export async function generatePayroll(month: string) {
           }
         } else {
           // No attendance and no leave = unpaid/missing
-          // Assuming weekends are not automatically paid if missing? 
-          // Usually in corporate, weekends are paid if attendance is regular.
-          // But as per "Any unpaid leave or missing attendance days should automatically reduce the number of payable days", 
-          // we count only what is tracked.
-          // unpaidLeaves += 1; 
+          // Count weekends/holidays differently if needed
+          const dayOfWeek = day.getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not weekend
+            unpaidLeaves += 1;
+          }
         }
       }
     }
@@ -81,11 +96,17 @@ export async function generatePayroll(month: string) {
     const basicSalary = emp.basicSalary || 0;
     const proratedSalary = (basicSalary / totalDaysInMonth) * payableDays;
     
-    const pfDeduction = proratedSalary * 0.12;
+    // Calculate overtime pay (1.5x hourly rate for overtime)
+    const hourlyRate = basicSalary / (totalDaysInMonth * 8); // Assuming 8-hour work days
+    const overtimePay = overtimeHours * hourlyRate * 1.5;
+    
+    const totalEarnings = proratedSalary + overtimePay;
+    
+    const pfDeduction = totalEarnings * 0.12;
     const professionalTax = 200; // Flat PT
 
     const totalDeductions = pfDeduction + professionalTax;
-    const netSalary = Math.max(0, proratedSalary - totalDeductions);
+    const netSalary = Math.max(0, totalEarnings - totalDeductions);
 
     await Payroll.create({
       user: emp._id,
@@ -93,11 +114,14 @@ export async function generatePayroll(month: string) {
       basicSalary: emp.basicSalary,
       payableDays,
       unpaidLeaves,
-      pfDeduction,
+      totalWorkingHours: Math.round(totalWorkingHours * 100) / 100,
+      overtimeHours: Math.round(overtimeHours * 100) / 100,
+      overtimePay: Math.round(overtimePay * 100) / 100,
+      pfDeduction: Math.round(pfDeduction * 100) / 100,
       professionalTax,
-      totalEarnings: proratedSalary,
-      totalDeductions,
-      netSalary,
+      totalEarnings: Math.round(totalEarnings * 100) / 100,
+      totalDeductions: Math.round(totalDeductions * 100) / 100,
+      netSalary: Math.round(netSalary * 100) / 100,
       status: 'Processed'
     });
   }

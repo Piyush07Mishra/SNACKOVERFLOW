@@ -106,3 +106,19 @@ export async function endBreak() {
 
   revalidatePath("/dashboard/attendance");
 }
+
+export async function updateAttendanceNote(notes: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  await dbConnect();
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  const existing = await Attendance.findOne({ user: session.user.id, date: today });
+  if (!existing) throw new Error("Attendance record not found");
+
+  existing.notes = notes;
+  await existing.save();
+
+  revalidatePath("/dashboard/attendance");
+}

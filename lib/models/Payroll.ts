@@ -6,6 +6,9 @@ const PayrollSchema = new mongoose.Schema({
   basicSalary: { type: Number, required: true },
   payableDays: { type: Number, required: true },
   unpaidLeaves: { type: Number, default: 0 },
+  totalWorkingHours: { type: Number, default: 0 }, // Total hours worked in the month
+  overtimeHours: { type: Number, default: 0 }, // Overtime hours in the month
+  overtimePay: { type: Number, default: 0 }, // Overtime compensation
   pfDeduction: { type: Number, required: true }, // 12% of basic
   professionalTax: { type: Number, required: true },
   totalEarnings: { type: Number, required: true },

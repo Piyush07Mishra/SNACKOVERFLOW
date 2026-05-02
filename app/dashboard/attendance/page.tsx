@@ -41,6 +41,7 @@ export default async function AttendancePage() {
     id: record._id.toString(),
     userName: record.user?.name || (isAdminOrOfficer ? "Unknown" : (session?.user?.name || "Self")),
     userEmail: record.user?.email || "",
+    employeeId: record.employeeId || record.user?.employeeId || "",
     date: record.date,
     status: record.status,
     checkIn: record.checkIn ? format(new Date(record.checkIn), "hh:mm a") : "-",
@@ -50,6 +51,7 @@ export default async function AttendancePage() {
       start: b.start ? format(new Date(b.start), "hh:mm a") : "-",
       end: b.end ? format(new Date(b.end), "hh:mm a") : "-",
     })) || [],
+    notes: record.notes || "",
   }));
 
   const serializedTodayRecord = todayRecord ? {
@@ -58,6 +60,8 @@ export default async function AttendancePage() {
     checkIn: todayRecord.checkIn ? new Date(todayRecord.checkIn).toISOString() : null,
     checkOut: todayRecord.checkOut ? new Date(todayRecord.checkOut).toISOString() : null,
     isOnBreak: todayRecord.breaks?.some((b: any) => !b.end) || false,
+    notes: todayRecord.notes || "",
+    totalWorkingHours: todayRecord.totalWorkingHours || 0,
   } : null;
 
   return (
