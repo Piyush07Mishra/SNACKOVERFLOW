@@ -54,6 +54,7 @@ export default function LoginPage() {
               <Input id="password" name="password" type="password" required />
             </div>
           </CardContent>
+          <div style={{height:10}}></div>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
