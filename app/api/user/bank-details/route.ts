@@ -28,21 +28,30 @@ export async function POST(req: Request) {
     const { bankName, accountNumber, ifscCode, branchName } = await req.json();
 
     await dbConnect();
-    const user = await User.findById(session.user.id);
+    console.log('Updating bank details for user:', session.user.id);
+    console.log('Data:', { bankName, accountNumber, ifscCode, branchName });
 
-    if (!user) {
+    const updatedUser = await User.findByIdAndUpdate(
+      session.user.id,
+      {
+        $set: {
+          bankDetails: {
+            bankName,
+            accountNumber,
+            ifscCode,
+            branchName,
+          }
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      console.error('User not found during bank details update');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    user.bankDetails = {
-      bankName,
-      accountNumber,
-      ifscCode,
-      branchName,
-    };
-
-    await user.save();
-
+    console.log('Successfully updated bank details');
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Bank details update error:', error);
