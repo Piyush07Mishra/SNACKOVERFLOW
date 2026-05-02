@@ -54,6 +54,7 @@ export async function GET() {
         role: user.role,
         designation: user.designation,
         department: user.department,
+        basicSalary: user.basicSalary || 0,
         status,
         payroll: payroll ? {
           netSalary: payroll.netSalary,

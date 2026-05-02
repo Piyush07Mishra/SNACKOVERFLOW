@@ -89,14 +89,37 @@ export function ProfileClient({
   isOtherUserProfile = false,
   userRole 
 }: ProfileClientProps) {
+  // Debug: Log initial data to see what's being passed
+  console.log('ProfileClient initialData:', initialData);
+  console.log('isOtherUserProfile:', isOtherUserProfile);
+  console.log('canEditSalary:', canEditSalary);
+  
   const [profileData, setProfileData] = useState<ProfileData>(initialData);
   const [isSaving, setIsSaving] = useState(false);
-  const [salaryComponents, setSalaryComponents] = useState<SalaryComponent[]>(
-    (initialData.salaryComponents || []).map((comp) => ({
+  const [salaryComponents, setSalaryComponents] = useState<SalaryComponent[]>(() => {
+    const components = initialData.salaryComponents || [];
+    console.log('Initial salary components:', components);
+    
+    if (components.length === 0 && initialData.basicSalary > 0) {
+      // Add default Basic component if no components exist
+      const defaultComponents = [{
+        name: "Basic",
+        computationType: "Fixed" as const,
+        value: initialData.basicSalary,
+        calculatedValue: initialData.basicSalary,
+        basisComponent: ""
+      }];
+      console.log('Created default components:', defaultComponents);
+      return defaultComponents;
+    }
+    
+    const processedComponents = components.map((comp) => ({
       ...comp,
       calculatedValue: comp.calculatedValue ?? 0,
-    }))
-  );
+    }));
+    console.log('Processed components:', processedComponents);
+    return processedComponents;
+  });
   const [salaryConfig, setSalaryConfig] = useState<SalaryConfig>(
     initialData.salaryConfig || { pfRate: 12, professionalTax: 200 }
   );
@@ -147,14 +170,21 @@ export function ProfileClient({
   const saveProfile = async () => {
     setIsSaving(true);
     try {
+      const requestBody: any = {
+        ...profileData,
+        salaryComponents,
+        salaryConfig,
+      };
+
+      // If editing another user's profile, include the userId
+      if (isOtherUserProfile) {
+        requestBody.userId = profileData._id;
+      }
+
       const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...profileData,
-          salaryComponents,
-          salaryConfig,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
@@ -203,11 +233,22 @@ export function ProfileClient({
   };
 
   useEffect(() => {
-    // Recalculate whenever wage changes
+    // Recalculate whenever wage changes or when viewing a different user
     if (profileData.basicSalary > 0) {
       calculateComponents();
     }
-  }, [profileData.basicSalary]);
+  }, [profileData.basicSalary, isOtherUserProfile]);
+
+  // Initialize salary components when viewing another user
+  useEffect(() => {
+    if (isOtherUserProfile && initialData.salaryComponents && salaryComponents.length === 0) {
+      const initializedComponents = initialData.salaryComponents.map((comp) => ({
+        ...comp,
+        calculatedValue: comp.calculatedValue ?? 0,
+      }));
+      setSalaryComponents(initializedComponents);
+    }
+  }, [isOtherUserProfile, initialData.salaryComponents]);
 
   const handleAddComponent = () => {
     const newComponent: SalaryComponent = {
