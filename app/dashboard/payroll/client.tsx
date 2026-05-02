@@ -9,6 +9,8 @@ import { generatePayroll, processPayment } from "./actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Download } from "lucide-react";
 import { generatePayslipPDF, generateEmployeeReportPDF } from "@/lib/pdfGenerator";
+import { PayrollStats } from "./payroll-stats";
+import { PayrollCharts } from "./payroll-charts";
 
 export function PayrollClient({ records, currentMonth }: { records: any[], currentMonth: string }) {
   const [loading, setLoading] = useState(false);
@@ -64,7 +66,16 @@ export function PayrollClient({ records, currentMonth }: { records: any[], curre
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Statistics and Charts Section */}
+      {records.length > 0 && (
+        <>
+          <PayrollStats records={records} currentMonth={currentMonth} />
+          <PayrollCharts records={records} />
+        </>
+      )}
+
+      {/* Action Buttons */}
       <div className="flex justify-end gap-2">
         <Button onClick={handleDownloadPayrollReport} variant="outline" className="gap-2">
           <Download className="h-4 w-4" />
@@ -90,8 +101,8 @@ export function PayrollClient({ records, currentMonth }: { records: any[], curre
             {records.map((rec) => (
               <TableRow key={rec.id}>
                 <TableCell className="font-medium">{rec.userName}</TableCell>
-                <TableCell>${rec.basicSalary}</TableCell>
-                <TableCell className="font-bold">${rec.netSalary}</TableCell>
+                <TableCell>₹{rec.basicSalary}</TableCell>
+                <TableCell className="font-bold">₹{rec.netSalary}</TableCell>
                 <TableCell>
                   <Badge variant={rec.status === "Paid" ? "default" : "secondary"}>{rec.status}</Badge>
                 </TableCell>
@@ -109,12 +120,12 @@ export function PayrollClient({ records, currentMonth }: { records: any[], curre
                           <div className="font-semibold">Month:</div><div>{rec.month}</div>
                           <div className="font-semibold">Payable Days:</div><div className="text-blue-600 font-bold">{rec.payableDays}</div>
                           <div className="font-semibold">Unpaid Leaves:</div><div className="text-red-500">{rec.unpaidLeaves}</div>
-                          <div className="font-semibold border-t pt-2">Basic Salary:</div><div className="border-t pt-2">${rec.basicSalary}</div>
-                          <div className="font-semibold">PF Deduction (12%):</div><div>${rec.pfDeduction.toFixed(2)}</div>
-                          <div className="font-semibold">Professional Tax:</div><div>${rec.professionalTax}</div>
-                          <div className="font-semibold border-t pt-2">Earnings (Prorated):</div><div className="border-t pt-2">${rec.totalEarnings.toFixed(2)}</div>
-                          <div className="font-semibold text-red-500">Total Deductions:</div><div className="text-red-500">${rec.totalDeductions.toFixed(2)}</div>
-                          <div className="font-bold border-t pt-2 text-green-600 text-lg">Net Salary:</div><div className="font-bold border-t pt-2 text-green-600 text-lg">${rec.netSalary.toFixed(2)}</div>
+                          <div className="font-semibold border-t pt-2">Basic Salary:</div><div className="border-t pt-2">₹{rec.basicSalary}</div>
+                          <div className="font-semibold">PF Deduction (12%):</div><div>₹{rec.pfDeduction.toFixed(2)}</div>
+                          <div className="font-semibold">Professional Tax:</div><div>₹{rec.professionalTax}</div>
+                          <div className="font-semibold border-t pt-2">Earnings (Prorated):</div><div className="border-t pt-2">₹{rec.totalEarnings.toFixed(2)}</div>
+                          <div className="font-semibold text-red-500">Total Deductions:</div><div className="text-red-500">₹{rec.totalDeductions.toFixed(2)}</div>
+                          <div className="font-bold border-t pt-2 text-green-600 text-lg">Net Salary:</div><div className="font-bold border-t pt-2 text-green-600 text-lg">₹{rec.netSalary.toFixed(2)}</div>
                         </div>
                         <div className="flex gap-2">
                           <Button 
