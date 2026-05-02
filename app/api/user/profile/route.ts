@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { NextRequest, NextResponse } from "next/server";
+import { calculateSalaryComponents } from "@/lib/salaryCalculations";
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check if user is trying to update salary
-    if (data.basicSalary !== undefined || data.salaryStructure !== undefined) {
+    if (data.basicSalary !== undefined || data.salaryComponents !== undefined || data.salaryConfig !== undefined) {
       if (currentUser.role !== "Admin" && currentUser.role !== "Payroll_Officer") {
         return NextResponse.json(
           { error: "Only Admin or Payroll Officer can update salary information" },
@@ -61,6 +62,15 @@ export async function PUT(request: NextRequest) {
           { status: 403 }
         );
       }
+    }
+
+    // Calculate salary components if basicSalary is provided
+    let calculatedComponents = data.salaryComponents;
+    if (data.salaryComponents && data.basicSalary !== undefined) {
+      calculatedComponents = calculateSalaryComponents(
+        data.salaryComponents,
+        data.basicSalary
+      );
     }
 
     // Build update object
@@ -93,8 +103,14 @@ export async function PUT(request: NextRequest) {
       if (data.basicSalary !== undefined) {
         updateData.basicSalary = data.basicSalary;
       }
-      if (data.salaryStructure !== undefined) {
-        updateData.salaryStructure = data.salaryStructure;
+      if (data.wageType !== undefined) {
+        updateData.wageType = data.wageType;
+      }
+      if (calculatedComponents) {
+        updateData.salaryComponents = calculatedComponents;
+      }
+      if (data.salaryConfig !== undefined) {
+        updateData.salaryConfig = data.salaryConfig;
       }
     }
 

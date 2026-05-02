@@ -45,7 +45,6 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
         // Simple role check
         if (item.name === "Dashboard" && !["Admin", "HR_Officer"].includes(user.role || "")) return null;
         if (item.name === "Settings" && user.role !== "Admin") return null;
-        if (item.name === "Payroll" && !["Admin", "Payroll_Officer"].includes(user.role || "")) return null;
 
         const isActive = pathname.startsWith(item.href);
         return (

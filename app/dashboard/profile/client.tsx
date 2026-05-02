@@ -9,7 +9,21 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { FileText, Lock, DollarSign, Landmark } from "lucide-react";
+import { FileText, Lock, DollarSign, Landmark, Trash2, Plus } from "lucide-react";
+import { calculateSalaryComponents, getTotalEarnings, getNetSalary } from "@/lib/salaryCalculations";
+
+interface SalaryComponent {
+  name: string;
+  computationType: "Fixed" | "Percentage";
+  value: number;
+  calculatedValue: number;
+  basisComponent?: string;
+}
+
+interface SalaryConfig {
+  pfRate: number;
+  professionalTax: number;
+}
 
 interface ProfileData {
   _id: string;
@@ -28,8 +42,10 @@ interface ProfileData {
   personalEmail: string;
   gender: string;
   maritalStatus: string;
+  wageType?: string;
   basicSalary: number;
-  salaryStructure: string;
+  salaryComponents?: SalaryComponent[];
+  salaryConfig?: SalaryConfig;
   bankDetails: {
     bankName: string;
     accountNumber: string;
@@ -63,6 +79,15 @@ interface ProfileClientProps {
 export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }: ProfileClientProps) {
   const [profileData, setProfileData] = useState<ProfileData>(initialData);
   const [isSaving, setIsSaving] = useState(false);
+  const [salaryComponents, setSalaryComponents] = useState<SalaryComponent[]>(
+    (initialData.salaryComponents || []).map((comp) => ({
+      ...comp,
+      calculatedValue: comp.calculatedValue ?? 0,
+    }))
+  );
+  const [salaryConfig, setSalaryConfig] = useState<SalaryConfig>(
+    initialData.salaryConfig || { pfRate: 12, professionalTax: 200 }
+  );
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedUserAccess, setSelectedUserAccess] = useState<AdminAccessData>({
@@ -113,12 +138,18 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
       const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profileData),
+        body: JSON.stringify({
+          ...profileData,
+          salaryComponents,
+          salaryConfig,
+        }),
       });
 
       if (response.ok) {
         const updated = await response.json();
         setProfileData(updated);
+        setSalaryComponents(updated.salaryComponents || []);
+        setSalaryConfig(updated.salaryConfig || { pfRate: 12, professionalTax: 200 });
         toast.success("Profile updated successfully!");
       } else {
         toast.error("Failed to update profile");
@@ -146,6 +177,49 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
 
   const handleAccessChange = (field: string, value: boolean) => {
     setSelectedUserAccess((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const calculateComponents = () => {
+    const calculated = calculateSalaryComponents(
+      salaryComponents,
+      profileData.basicSalary
+    );
+    setSalaryComponents(calculated);
+  };
+
+  useEffect(() => {
+    // Recalculate whenever wage changes
+    if (profileData.basicSalary > 0) {
+      calculateComponents();
+    }
+  }, [profileData.basicSalary]);
+
+  const handleAddComponent = () => {
+    const newComponent: SalaryComponent = {
+      name: "",
+      computationType: "Fixed",
+      value: 0,
+      calculatedValue: 0,
+      basisComponent: "",
+    };
+    setSalaryComponents([...salaryComponents, newComponent]);
+  };
+
+  const handleUpdateComponent = (index: number, field: string, value: any) => {
+    const updated = [...salaryComponents];
+    (updated[index] as any)[field] = value;
+    setSalaryComponents(updated);
+  };
+
+  const handleDeleteComponent = (index: number) => {
+    setSalaryComponents(salaryComponents.filter((_, i) => i !== index));
+  };
+
+  const handleSalaryConfig = (field: string, value: number) => {
+    setSalaryConfig((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -362,42 +436,275 @@ export function ProfileClient({ initialData, isAdmin, canEditSalary, userRole }:
 
         {/* Salary Tab */}
         <TabsContent value="salary">
-          <Card>
-            <CardHeader>
-              <CardTitle>Salary Information</CardTitle>
-              {!canEditSalary && (
-                <p className="text-sm text-amber-600 mt-2">
-                  Salary information can only be edited by Admin or Payroll Officer
+          <div className="space-y-4">
+            {/* Info Card */}
+            <Card className={canEditSalary ? "border-blue-200 bg-blue-50/50" : "border-green-200 bg-green-50/50"}>
+              <CardContent className="pt-6">
+                <p className={canEditSalary ? "text-sm text-blue-700" : "text-sm text-green-700"}>
+                  {canEditSalary 
+                    ? "📝 You can edit salary components and configuration" 
+                    : "👁️ You can view your salary structure. Contact HR or Admin to make changes."}
                 </p>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Basic Salary</Label>
-                  <Input
-                    type="number"
-                    value={profileData.basicSalary}
-                    onChange={(e) => handleProfileChange("basicSalary", Number(e.target.value))}
-                    disabled={!canEditSalary}
-                    className={!canEditSalary ? "bg-muted" : ""}
-                  />
+              </CardContent>
+            </Card>
+
+            {/* Wage Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Wage Configuration</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Wage Type</Label>
+                    <Select value={profileData.wageType || "Fixed"} onValueChange={(value) => handleProfileChange("wageType", value)} disabled={!canEditSalary}>
+                      <SelectTrigger disabled={!canEditSalary} className={!canEditSalary ? "bg-muted cursor-not-allowed" : ""}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Fixed">Fixed</SelectItem>
+                        <SelectItem value="Variable">Variable</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Wage Amount (₹)</Label>
+                    <Input
+                      type="number"
+                      value={profileData.basicSalary}
+                      onChange={(e) => handleProfileChange("basicSalary", Number(e.target.value))}
+                      disabled={!canEditSalary}
+                      className={!canEditSalary ? "bg-muted cursor-not-allowed" : ""}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Salary Structure</Label>
-                  <Input
-                    value={profileData.salaryStructure}
-                    onChange={(e) => handleProfileChange("salaryStructure", e.target.value)}
-                    disabled={!canEditSalary}
-                    className={!canEditSalary ? "bg-muted" : ""}
-                  />
+              </CardContent>
+            </Card>
+
+            {/* Salary Components */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Salary Components</CardTitle>
+                  {canEditSalary && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleAddComponent}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Component
+                    </Button>
+                  )}
                 </div>
-              </div>
-              <Button onClick={saveProfile} disabled={isSaving || !canEditSalary} className="w-full">
-                {isSaving ? "Saving..." : "Save Changes"}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {salaryComponents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No salary components defined yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {canEditSalary ? (
+                      // Edit Mode for Admin/Payroll
+                      salaryComponents.map((component, index) => (
+                        <div key={index} className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                            <div className="space-y-2">
+                              <Label>Component Name</Label>
+                              <Input
+                                value={component.name}
+                                onChange={(e) => handleUpdateComponent(index, "name", e.target.value)}
+                                placeholder="e.g., Basic, HRA, DA"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Computation Type</Label>
+                              <Select value={component.computationType} onValueChange={(value) => handleUpdateComponent(index, "computationType", value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Fixed">Fixed Amount</SelectItem>
+                                  <SelectItem value="Percentage">Percentage</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{component.computationType === "Fixed" ? "Amount (₹)" : "Percentage (%)"}</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={component.value}
+                                onChange={(e) => handleUpdateComponent(index, "value", Number(e.target.value))}
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Calculated Value (₹)</Label>
+                              <Input
+                                type="number"
+                                value={component.calculatedValue || 0}
+                                disabled
+                                className="bg-muted"
+                              />
+                            </div>
+                          </div>
+                          {component.computationType === "Percentage" && (
+                            <div className="mb-3">
+                              <Label>Basis Component (if % of another component)</Label>
+                              <Select value={component.basisComponent || ""} onValueChange={(value) => handleUpdateComponent(index, "basisComponent", value)}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select basis component (leave empty for % of wage)" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="">Wage</SelectItem>
+                                  {salaryComponents.map((comp, i) => (
+                                    i !== index && comp.name && (
+                                      <SelectItem key={i} value={comp.name}>
+                                        {comp.name}
+                                      </SelectItem>
+                                    )
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteComponent(index)}
+                              className="gap-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      // View Mode for Employees
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {salaryComponents.map((component, index) => (
+                          <div
+                            key={index}
+                            className="border border-blue-200 rounded-lg p-4 bg-blue-50/50 dark:bg-blue-950/50"
+                          >
+                            <h3 className="font-semibold text-sm mb-2">{component.name}</h3>
+                            <div className="space-y-1 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Type:</span>
+                                <span>{component.computationType}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Value:</span>
+                                <span>{component.value}{component.computationType === "Percentage" ? "%" : "₹"}</span>
+                              </div>
+                              <div className="border-t pt-2 mt-2 flex justify-between font-semibold text-blue-700 dark:text-blue-300">
+                                <span>Calculated:</span>
+                                <span>₹{(component.calculatedValue || 0).toFixed(2)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Salary Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Deductions Configuration</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>PF Rate (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={salaryConfig.pfRate}
+                      onChange={(e) => handleSalaryConfig("pfRate", Number(e.target.value))}
+                      disabled={!canEditSalary}
+                      className={!canEditSalary ? "bg-muted cursor-not-allowed" : ""}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Professional Tax (₹)</Label>
+                    <Input
+                      type="number"
+                      value={salaryConfig.professionalTax}
+                      onChange={(e) => handleSalaryConfig("professionalTax", Number(e.target.value))}
+                      disabled={!canEditSalary}
+                      className={!canEditSalary ? "bg-muted cursor-not-allowed" : ""}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Salary Breakdown */}
+            {salaryComponents.length > 0 && profileData.basicSalary > 0 && (
+              <Card className="bg-blue-50/50">
+                <CardHeader>
+                  <CardTitle>Salary Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h3 className="font-semibold mb-3">Earnings</h3>
+                        <div className="space-y-2">
+                          {salaryComponents.map((comp, i) => (
+                            <div key={i} className="flex justify-between text-sm">
+                              <span>{comp.name}:</span>
+                              <span className="font-medium">₹{(comp.calculatedValue || 0).toFixed(2)}</span>
+                            </div>
+                          ))}
+                          <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
+                            <span>Total Earnings:</span>
+                            <span>₹{getTotalEarnings(salaryComponents).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-3">Deductions</h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>PF ({salaryConfig.pfRate}%):</span>
+                            <span className="font-medium">₹{((salaryConfig.pfRate / 100) * getTotalEarnings(salaryComponents)).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Professional Tax:</span>
+                            <span className="font-medium">₹{salaryConfig.professionalTax.toFixed(2)}</span>
+                          </div>
+                          <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
+                            <span>Total Deductions:</span>
+                            <span>₹{(((salaryConfig.pfRate / 100) * getTotalEarnings(salaryComponents)) + salaryConfig.professionalTax).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="border-t pt-4 mt-4 flex justify-between text-lg font-bold bg-white dark:bg-slate-900 p-3 rounded">
+                      <span>Net Salary:</span>
+                      <span className="text-green-600">
+                        ₹{getNetSalary(getTotalEarnings(salaryComponents), ((salaryConfig.pfRate / 100) * getTotalEarnings(salaryComponents)) + salaryConfig.professionalTax).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {canEditSalary && (
+              <Button onClick={saveProfile} disabled={isSaving} className="w-full">
+                {isSaving ? "Saving..." : "Save Salary Configuration"}
               </Button>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </TabsContent>
 
         {/* Security Tab */}

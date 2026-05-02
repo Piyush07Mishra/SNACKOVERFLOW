@@ -5,9 +5,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const { userId } = await params;
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -21,7 +22,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
-    const user = await User.findById(params.userId);
+    const user = await User.findById(userId);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -36,9 +37,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const { userId } = await params;
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -55,7 +57,7 @@ export async function PUT(
     const { adminPermissions } = await request.json();
 
     const user = await User.findByIdAndUpdate(
-      params.userId,
+      userId,
       { adminPermissions },
       { new: true }
     );

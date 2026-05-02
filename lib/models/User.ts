@@ -1,5 +1,13 @@
 import mongoose from 'mongoose';
 
+const SalaryComponentSchema = new mongoose.Schema({
+  name: { type: String, required: true }, // Basic, HRA, Standard Allowance, Performance Bonus, etc.
+  computationType: { type: String, enum: ['Fixed', 'Percentage'], default: 'Fixed' },
+  value: { type: Number, default: 0 }, // Amount or percentage
+  calculatedValue: { type: Number, default: 0 }, // Auto-calculated value
+  basisComponent: { type: String, default: '' }, // e.g., "Basic" for HRA which is % of Basic
+}, { _id: false });
+
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -25,8 +33,17 @@ const UserSchema = new mongoose.Schema({
   joiningDate: { type: Date, default: Date.now },
   
   // Salary Info
-  basicSalary: { type: Number, default: 0 },
-  salaryStructure: { type: String, default: '' },
+  wageType: { type: String, enum: ['Fixed', 'Variable'], default: 'Fixed' },
+  basicSalary: { type: Number, default: 0 }, // This is the wage amount
+  
+  // Salary Components
+  salaryComponents: [SalaryComponentSchema],
+  
+  // Salary Configuration
+  salaryConfig: {
+    pfRate: { type: Number, default: 12 }, // PF rate %
+    professionalTax: { type: Number, default: 200 }, // Fixed amount
+  },
   
   // Bank Details
   bankDetails: {
