@@ -160,6 +160,119 @@ export async function generatePayslipPDF(
   }
 }
 
+export function generatePayrollReportPDF(
+  payrollRecords: any[],
+  title: string = "Payroll Report"
+) {
+  try {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    let yPosition = 20;
+    const lineHeight = 7;
+
+    // Header
+    pdf.setFontSize(16);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(title, pageWidth / 2, yPosition, { align: "center" });
+    yPosition += 15;
+
+    // Date
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, yPosition);
+    yPosition += 15;
+
+    // Summary Statistics
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.text("SUMMARY", 20, yPosition);
+    yPosition += lineHeight + 3;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    const totalEmployees = payrollRecords.length;
+    const totalPayroll = payrollRecords.reduce((sum, record) => sum + record.netSalary, 0);
+    const totalDeductions = payrollRecords.reduce((sum, record) => sum + record.totalDeductions, 0);
+    const paidCount = payrollRecords.filter(r => r.status === "Paid").length;
+    
+    pdf.text(`Total Employees: ${totalEmployees}`, 25, yPosition);
+    yPosition += lineHeight;
+    pdf.text(`Total Payroll: ₹${totalPayroll.toLocaleString()}`, 25, yPosition);
+    yPosition += lineHeight;
+    pdf.text(`Total Deductions: ₹${totalDeductions.toLocaleString()}`, 25, yPosition);
+    yPosition += lineHeight;
+    pdf.text(`Paid Employees: ${paidCount}/${totalEmployees}`, 25, yPosition);
+    yPosition += lineHeight + 5;
+
+    // Table Header
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8);
+    const headers = ["Employee", "Month", "Basic", "Payable\nDays", "Unpaid\nLeaves", "PF\nDeduction", "Prof.\nTax", "Total\nEarnings", "Total\nDeductions", "Net\nSalary", "Status"];
+    const colWidths = [35, 25, 25, 15, 15, 20, 15, 25, 20, 25, 20];
+    let xPosition = 10;
+
+    headers.forEach((header, i) => {
+      pdf.text(header, xPosition, yPosition);
+      xPosition += colWidths[i];
+    });
+
+    yPosition += lineHeight + 5;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(10, yPosition, 200, yPosition);
+    yPosition += lineHeight;
+
+    // Table Data
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    payrollRecords.forEach((record) => {
+      if (yPosition > 260) {
+        pdf.addPage();
+        yPosition = 20;
+        
+        // Re-add header on new page
+        pdf.setFont("helvetica", "bold");
+        xPosition = 10;
+        headers.forEach((header, i) => {
+          pdf.text(header, xPosition, yPosition);
+          xPosition += colWidths[i];
+        });
+        yPosition += lineHeight + 5;
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(10, yPosition, 200, yPosition);
+        yPosition += lineHeight;
+        pdf.setFont("helvetica", "normal");
+      }
+
+      xPosition = 10;
+      const row = [
+        record.userName || "-",
+        record.month || "-",
+        `₹${record.basicSalary.toLocaleString()}`,
+        record.payableDays.toString(),
+        record.unpaidLeaves.toString(),
+        `₹${record.pfDeduction.toFixed(0)}`,
+        `₹${record.professionalTax}`,
+        `₹${record.totalEarnings.toLocaleString()}`,
+        `₹${record.totalDeductions.toLocaleString()}`,
+        `₹${record.netSalary.toLocaleString()}`,
+        record.status || "-"
+      ];
+
+      row.forEach((cell, i) => {
+        pdf.text(String(cell), xPosition, yPosition);
+        xPosition += colWidths[i];
+      });
+
+      yPosition += lineHeight;
+    });
+
+    pdf.save(`${title.toLowerCase().replace(/ /g, "-")}.pdf`);
+  } catch (error) {
+    console.error("Error generating payroll report PDF:", error);
+    throw new Error("Failed to generate payroll report PDF");
+  }
+}
+
 export function generateEmployeeReportPDF(
   employees: any[],
   title: string = "Employee Directory Report"

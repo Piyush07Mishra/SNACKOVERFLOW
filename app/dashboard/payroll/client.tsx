@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { generatePayroll, processPayment } from "./actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Download } from "lucide-react";
-import { generatePayslipPDF, generateEmployeeReportPDF } from "@/lib/pdfGenerator";
+import { generatePayslipPDF, generatePayrollReportPDF } from "@/lib/pdfGenerator";
 import { PayrollStats } from "./payroll-stats";
 import { PayrollCharts } from "./payroll-charts";
 
@@ -58,7 +58,7 @@ export function PayrollClient({ records, currentMonth }: { records: any[], curre
 
   async function handleDownloadPayrollReport() {
     try {
-      generateEmployeeReportPDF(records, `Payroll Report - ${currentMonth}`);
+      generatePayrollReportPDF(records, `Payroll Report - ${currentMonth}`);
       toast.success("Report downloaded successfully!");
     } catch (error) {
       toast.error("Failed to download report");
