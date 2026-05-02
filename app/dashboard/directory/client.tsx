@@ -10,13 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Edit, Download } from "lucide-react";
-import { createEmployee } from "./actions";
+import { Edit, Download, Trash2, AlertTriangle } from "lucide-react";
+import { createEmployee, deleteEmployee } from "./actions";
 import { generateEmployeeReportPDF } from "@/lib/pdfGenerator";
 
 export function DirectoryClient({ employees, canManage }: { employees: any[], canManage: boolean }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<any>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -49,6 +52,29 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
     } catch (error) {
       toast.error("Failed to download report");
     }
+  }
+
+  async function handleDeleteEmployee() {
+    if (!employeeToDelete) return;
+
+    setDeleteLoading(true);
+    try {
+      await deleteEmployee(employeeToDelete.id);
+      toast.success(`${employeeToDelete.name} has been deleted successfully`);
+      setDeleteDialogOpen(false);
+      setEmployeeToDelete(null);
+      // Refresh the page to show updated data
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete employee");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
+  function openDeleteDialog(employee: any) {
+    setEmployeeToDelete(employee);
+    setDeleteDialogOpen(true);
   }
 
   return (
@@ -139,12 +165,25 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
                 <TableCell>{emp.designation || "-"}</TableCell>
                 {canManage && (
                   <TableCell className="text-right">
-                    <Link href={`/dashboard/profile?userId=${emp.id}`}>
-                      <Button size="sm" variant="outline" className="gap-2">
-                        <Edit className="h-4 w-4" />
-                        Edit
-                      </Button>
-                    </Link>
+                    <div className="flex gap-2 justify-end">
+                      <Link href={`/dashboard/profile?userId=${emp.id}`}>
+                        <Button size="sm" variant="outline" className="gap-2">
+                          <Edit className="h-4 w-4" />
+                          Edit
+                        </Button>
+                      </Link>
+                      {emp.role !== "Admin" && (
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          className="gap-2"
+                          onClick={() => openDeleteDialog(emp)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 )}
               </TableRow>
@@ -152,6 +191,48 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
           </TableBody>
         </Table>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Confirm Deletion
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-muted-foreground">
+              Are you sure you want to delete <strong>{employeeToDelete?.name}</strong>? This action cannot be undone.
+            </p>
+            <div className="bg-muted/50 p-3 rounded-lg">
+              <p className="text-sm font-medium">This will permanently delete:</p>
+              <ul className="text-sm text-muted-foreground mt-2 space-y-1">
+                <li>• Employee profile and account</li>
+                <li>• All attendance records</li>
+                <li>• Payroll history</li>
+                <li>• Leave requests</li>
+              </ul>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteEmployee}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "Deleting..." : "Delete Employee"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
