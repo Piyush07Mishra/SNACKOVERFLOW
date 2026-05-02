@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { CheckInButton } from "./CheckInButton";
 
 interface User {
   id: string;
@@ -79,7 +80,12 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
                 <span className="text-xl text-primary">EmPay</span>
               </Link>
             </div>
-            <NavLinks />
+            <div className="flex-1 overflow-auto">
+              <NavLinks />
+            </div>
+            <div className="mt-auto p-4 border-t">
+              <CheckInButton />
+            </div>
           </div>
         </SheetContent>
       </Sheet>
@@ -97,7 +103,8 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
               <NavLinks />
             </nav>
           </div>
-          <div className="mt-auto p-4 border-t">
+          <div className="mt-auto p-4 border-t space-y-4">
+            <CheckInButton />
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
                 <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
