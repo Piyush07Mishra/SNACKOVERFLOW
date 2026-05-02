@@ -23,7 +23,6 @@ interface DashboardLayoutProps {
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Profile", href: "/dashboard/profile", icon: UserIcon },
   { name: "Directory", href: "/dashboard/directory", icon: Users },
   { name: "Attendance", href: "/dashboard/attendance", icon: Clock },
   { name: "Time Off", href: "/dashboard/timeoff", icon: CalendarDays },
@@ -83,8 +82,19 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
             <div className="flex-1 overflow-auto">
               <NavLinks />
             </div>
-            <div className="mt-auto p-4 border-t">
+            <div className="mt-auto p-4 border-t space-y-4">
               <CheckInButton />
+              <Link href="/dashboard/profile">
+                <span
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                    pathname.startsWith("/dashboard/profile") ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  <UserIcon className="h-4 w-4" />
+                  Profile
+                </span>
+              </Link>
             </div>
           </div>
         </SheetContent>
@@ -105,6 +115,17 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
           </div>
           <div className="mt-auto p-4 border-t space-y-4">
             <CheckInButton />
+            <Link href="/dashboard/profile">
+              <span
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                  pathname.startsWith("/dashboard/profile") ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                )}
+              >
+                <UserIcon className="h-4 w-4" />
+                Profile
+              </span>
+            </Link>
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
                 <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>

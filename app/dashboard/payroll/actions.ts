@@ -93,7 +93,31 @@ export async function generatePayroll(month: string) {
       }
     }
 
-    const basicSalary = emp.basicSalary || 0;
+    const basicSalary = Number(emp.basicSalary) || 0;
+    
+    // Validate inputs to prevent NaN
+    if (basicSalary <= 0 || totalDaysInMonth <= 0) {
+      console.warn(`Invalid salary data for employee ${emp.name}: basicSalary=${basicSalary}, totalDaysInMonth=${totalDaysInMonth}`);
+      // Create payroll with zero values for employees with invalid salary
+      await Payroll.create({
+        user: emp._id,
+        month,
+        basicSalary: 0,
+        payableDays,
+        unpaidLeaves,
+        totalWorkingHours: Math.round(totalWorkingHours * 100) / 100,
+        overtimeHours: Math.round(overtimeHours * 100) / 100,
+        overtimePay: 0,
+        pfDeduction: 0,
+        professionalTax: 0,
+        totalEarnings: 0,
+        totalDeductions: 0,
+        netSalary: 0,
+        status: 'Processed'
+      });
+      continue;
+    }
+    
     const proratedSalary = (basicSalary / totalDaysInMonth) * payableDays;
     
     // Calculate overtime pay (1.5x hourly rate for overtime)

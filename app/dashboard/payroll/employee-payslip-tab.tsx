@@ -198,16 +198,16 @@ export function EmployeePayslipTab({ employee, currentMonth, onPaymentProcessed 
             <div className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="font-medium text-blue-700">Basic Salary:</span>
-                <span className="font-semibold">₹{employee.basicSalary.toLocaleString()}</span>
+                <span className="font-semibold">₹{(employee.basicSalary || 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="font-medium text-blue-700">Prorated ({employee.payroll.payableDays} days):</span>
-                <span className="font-semibold text-blue-600">₹{employee.payroll.totalEarnings.toLocaleString()}</span>
+                <span className="font-semibold text-blue-600">₹{(employee.payroll.totalEarnings || 0).toLocaleString()}</span>
               </div>
               <div className="border-t border-blue-200 pt-3">
                 <div className="flex justify-between font-bold">
                   <span className="text-blue-800">Total Earnings:</span>
-                  <span className="text-green-600 text-lg">₹{employee.payroll.totalEarnings.toLocaleString()}</span>
+                  <span className="text-green-600 text-lg">₹{(employee.payroll.totalEarnings || 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -225,22 +225,22 @@ export function EmployeePayslipTab({ employee, currentMonth, onPaymentProcessed 
             <div className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="font-medium text-red-700">Provident Fund (12%):</span>
-                <span>₹{employee.payroll.pfDeduction.toLocaleString()}</span>
+                <span>₹{(employee.payroll.pfDeduction || 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="font-medium text-red-700">Professional Tax:</span>
-                <span>₹{employee.payroll.professionalTax.toLocaleString()}</span>
+                <span>₹{(employee.payroll.professionalTax || 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="font-medium text-red-700">Loss of Pay ({employee.payroll.unpaidLeaves} days):</span>
                 <span className="text-red-500 font-semibold">
-                  ₹{Math.round((employee.basicSalary / 22) * employee.payroll.unpaidLeaves).toLocaleString()}
+                  ₹{Math.round(((employee.basicSalary || 0) / 22) * (employee.payroll.unpaidLeaves || 0)).toLocaleString()}
                 </span>
               </div>
               <div className="border-t border-red-200 pt-3">
                 <div className="flex justify-between font-bold">
                   <span className="text-red-800">Total Deductions:</span>
-                  <span className="text-red-600 text-lg">₹{employee.payroll.totalDeductions.toLocaleString()}</span>
+                  <span className="text-red-600 text-lg">₹{(employee.payroll.totalDeductions || 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -257,7 +257,7 @@ export function EmployeePayslipTab({ employee, currentMonth, onPaymentProcessed 
           <CardContent>
             <div className="text-center space-y-4">
               <div className="text-3xl font-bold text-green-600">
-                ₹{employee.payroll.netSalary.toLocaleString()}
+                ₹{(employee.payroll.netSalary || 0).toLocaleString()}
               </div>
               <p className="text-sm text-green-600">
                 Take-home salary for {currentMonth}
@@ -265,11 +265,11 @@ export function EmployeePayslipTab({ employee, currentMonth, onPaymentProcessed 
               <div className="bg-white/50 rounded-lg p-3 space-y-2">
                 <div className="flex justify-between text-xs">
                   <span>Monthly:</span>
-                  <span className="font-semibold">₹{Math.round(employee.payroll.netSalary).toLocaleString()}</span>
+                  <span className="font-semibold">₹{Math.round(employee.payroll.netSalary || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span>Daily:</span>
-                  <span className="font-semibold">₹{Math.round(employee.payroll.netSalary / employee.payroll.payableDays).toLocaleString()}</span>
+                  <span className="font-semibold">₹{Math.round((employee.payroll.netSalary || 0) / (employee.payroll.payableDays || 1)).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -300,19 +300,19 @@ export function EmployeePayslipTab({ employee, currentMonth, onPaymentProcessed 
                 <div className="space-y-1">
                   <div className="flex justify-between">
                     <span>Basic Salary:</span>
-                    <span>₹{employee.basicSalary.toLocaleString()}</span>
+                    <span>₹{(employee.basicSalary || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Daily Rate:</span>
-                    <span>₹{Math.round(employee.basicSalary / 22).toLocaleString()}/day</span>
+                    <span>₹{Math.round((employee.basicSalary || 0) / 22).toLocaleString()}/day</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Payable Days:</span>
-                    <span>{employee.payroll.payableDays} days</span>
+                    <span>{employee.payroll.payableDays || 0} days</span>
                   </div>
                   <div className="flex justify-between font-semibold pt-2 border-t">
                     <span>Net Daily Rate:</span>
-                    <span>₹{Math.round(employee.payroll.netSalary / employee.payroll.payableDays).toLocaleString()}/day</span>
+                    <span>₹{Math.round((employee.payroll.netSalary || 0) / (employee.payroll.payableDays || 1)).toLocaleString()}/day</span>
                   </div>
                 </div>
               </div>
