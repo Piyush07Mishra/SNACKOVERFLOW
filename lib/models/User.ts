@@ -9,11 +9,40 @@ const SalaryComponentSchema = new mongoose.Schema({
 }, { _id: false });
 
 const UserSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  employeeId: { type: String, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['Admin', 'Employee', 'HR_Officer', 'Payroll_Officer'], default: 'Employee' },
+  name: { 
+    type: String, 
+    required: [true, 'Name is required'],
+    trim: true,
+    minlength: [2, 'Name must be at least 2 characters'],
+    maxlength: [50, 'Name cannot exceed 50 characters']
+  },
+  email: { 
+    type: String, 
+    required: [true, 'Email is required'], 
+    unique: true,
+    lowercase: true,
+    trim: true,
+    maxlength: [100, 'Email cannot exceed 100 characters']
+  },
+  employeeId: { 
+    type: String, 
+    unique: true,
+    trim: true,
+    uppercase: true,
+    maxlength: [20, 'Employee ID cannot exceed 20 characters']
+  },
+  password: { 
+    type: String, 
+    required: [true, 'Password is required'],
+    minlength: [8, 'Password must be at least 8 characters'],
+    maxlength: [128, 'Password cannot exceed 128 characters'],
+    select: false // Never return password in queries
+  },
+  role: { 
+    type: String, 
+    enum: ['Admin', 'Employee', 'HR_Officer', 'Payroll_Officer'], 
+    default: 'Employee' 
+  },
   
   // Resume Info
   jobPosition: { type: String, default: '' },
@@ -63,5 +92,20 @@ const UserSchema = new mongoose.Schema({
     canViewReports: { type: Boolean, default: false },
   }
 }, { timestamps: true });
+
+// Performance and security indexes
+UserSchema.index({ email: 1 }, { unique: true });
+UserSchema.index({ employeeId: 1 }, { unique: true });
+UserSchema.index({ role: 1 });
+UserSchema.index({ department: 1 });
+UserSchema.index({ joiningDate: -1 });
+
+// Text search indexes for better search performance
+UserSchema.index({ 
+  name: 'text', 
+  email: 'text',
+  employeeId: 'text',
+  jobPosition: 'text'
+});
 
 export const User = mongoose.models.User || mongoose.model('User', UserSchema);

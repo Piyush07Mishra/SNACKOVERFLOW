@@ -188,10 +188,12 @@ export function AttendanceTimer({ todayRecord, onAction }: {
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNoteText(e.target.value)}
                         placeholder="Add notes about your workday..."
                         className="min-h-[80px]"
+                        role="textbox"
+                        aria-label="Notes"
                       />
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={handleSaveNote}>
-                          <Save className="w-3 h-3 mr-1" />
+                        <Button size="sm" onClick={handleSaveNote} role="button" aria-label="Save Notes">
+                          <Save className="w-3 h-3 mr-1" aria-hidden="true" />
                           Save
                         </Button>
                         <Button 

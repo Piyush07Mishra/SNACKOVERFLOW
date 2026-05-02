@@ -5,27 +5,46 @@ import { Attendance } from "@/lib/models/Attendance";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { format, differenceInMinutes } from "date-fns";
+import { attendanceNoteSchema, sanitizeInput, createSuccessResponse } from "@/lib/security";
+import logger from "@/lib/logger";
 
 export async function checkIn() {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-
-  await dbConnect();
-  const today = format(new Date(), "yyyy-MM-dd");
-
-  const existing = await Attendance.findOne({ user: session.user.id, date: today });
-  if (existing) {
-    throw new Error("Already checked in for today");
+  if (!session?.user?.id) {
+    logger.security("Unauthorized check-in attempt", session?.user?.id || 'unknown', undefined, "checkin");
+    throw new Error("Unauthorized");
   }
 
-  await Attendance.create({
-    user: session.user.id,
-    date: today,
-    status: "Present",
-    checkIn: new Date(),
-  });
+  try {
+    await dbConnect();
+    const today = format(new Date(), "yyyy-MM-dd");
 
-  revalidatePath("/dashboard/attendance");
+    const existing = await Attendance.findOne({ user: session.user.id, date: today });
+    if (existing) {
+      logger.warn("Duplicate check-in attempt", session.user.id, undefined, "checkin", {
+        date: today,
+        existingRecordId: existing._id
+      });
+      throw new Error("Already checked in for today");
+    }
+
+    const attendance = await Attendance.create({
+      user: session.user.id,
+      date: today,
+      status: "Present",
+      checkIn: new Date(),
+      timerStartTime: new Date(),
+    });
+
+    logger.db("create", "attendance", session.user.id, { date: today, status: "Present" }, attendance);
+    
+    revalidatePath("/dashboard/attendance");
+    return createSuccessResponse({ message: "Checked in successfully" });
+
+  } catch (error: any) {
+    logger.error("Check-in failed", session.user?.id, undefined, "checkin", error);
+    throw error;
+  }
 }
 
 export async function checkOut() {
@@ -109,16 +128,44 @@ export async function endBreak() {
 
 export async function updateAttendanceNote(notes: string) {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+  if (!session?.user?.id) {
+    logger.security("Unauthorized note update attempt", session?.user?.id || 'unknown', undefined, "updateNote");
+    throw new Error("Unauthorized");
+  }
 
-  await dbConnect();
-  const today = format(new Date(), "yyyy-MM-dd");
+  try {
+    // Input validation
+    const validation = attendanceNoteSchema.safeParse({ notes });
+    if (!validation.success) {
+      const errorMessages = validation.error.issues.map((err: any) => err.message).join(', ');
+      logger.warn("Invalid note data", session.user.id, undefined, "updateNote", {
+        validationErrors: errorMessages
+      });
+      throw new Error(`Validation failed: ${errorMessages}`);
+    }
 
-  const existing = await Attendance.findOne({ user: session.user.id, date: today });
-  if (!existing) throw new Error("Attendance record not found");
+    await dbConnect();
+    const today = format(new Date(), "yyyy-MM-dd");
 
-  existing.notes = notes;
-  await existing.save();
+    const existing = await Attendance.findOne({ user: session.user.id, date: today });
+    if (!existing) {
+      logger.warn("Note update on non-existent attendance", session.user.id, undefined, "updateNote", {
+        date: today
+      });
+      throw new Error("Attendance record not found");
+    }
 
-  revalidatePath("/dashboard/attendance");
+    const sanitizedNotes = sanitizeInput(notes);
+    existing.notes = sanitizedNotes;
+    await existing.save();
+
+    logger.db("update", "attendance", session.user.id, { date: today, notesUpdated: true }, existing);
+    
+    revalidatePath("/dashboard/attendance");
+    return createSuccessResponse({ message: "Note updated successfully" });
+
+  } catch (error: any) {
+    logger.error("Note update failed", session.user.id, undefined, "updateNote", error);
+    throw error;
+  }
 }

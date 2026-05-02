@@ -3,14 +3,30 @@ import dbConnect from '@/lib/mongodb';
 import { Attendance } from '@/lib/models/Attendance';
 import { auth } from '@/auth';
 import { format } from 'date-fns';
+import { rateLimit, setSecurityHeaders, createErrorResponse, createSuccessResponse } from '@/lib/security';
 
-export async function POST() {
+// Get client IP for rate limiting
+function getClientIP(req: Request): string {
+  return req.headers.get('x-forwarded-for') || 
+         req.headers.get('x-real-ip') || 
+         'unknown';
+}
+
+export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const response = createErrorResponse('Unauthorized', 401);
+    return setSecurityHeaders(response);
   }
 
   try {
+    // Rate limiting
+    const clientIP = getClientIP(req);
+    if (!rateLimit(`checkin:${session.user.id}`, 10, 60 * 60 * 1000)) { // 10 check-ins per hour
+      const response = createErrorResponse('Too many check-in attempts. Please try again later.', 429);
+      return setSecurityHeaders(response);
+    }
+
     await dbConnect();
     const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -21,19 +37,34 @@ export async function POST() {
     });
 
     if (existing) {
-      return NextResponse.json({ error: 'Already checked in today' }, { status: 400 });
+      const response = createErrorResponse('Already checked in today', 400);
+      return setSecurityHeaders(response);
     }
 
-    await Attendance.create({
+    const attendance = await Attendance.create({
       user: session.user.id,
       date: today,
       status: 'Present',
       checkIn: new Date(),
+      timerStartTime: new Date(), // Set timer start time
     });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Check-in error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    const response = createSuccessResponse({ 
+      success: true,
+      attendanceId: attendance._id,
+      checkInTime: attendance.checkIn
+    });
+    return setSecurityHeaders(response);
+
+  } catch (error: any) {
+    console.error('Check-in error:', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+      userId: session?.user?.id
+    });
+    
+    const response = createErrorResponse('Internal Server Error', 500);
+    return setSecurityHeaders(response);
   }
 }
