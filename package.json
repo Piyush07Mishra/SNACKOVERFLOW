@@ -11,7 +11,9 @@
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/addSampleData.ts",
-    "seed-bulk": "tsx scripts/addBulkDataStandalone.ts"
+    "seed-bulk": "tsx scripts/addBulkDataStandalone.ts",
+    "test-pwa": "tsx scripts/testPWA.ts",
+    "create-icons": "tsx scripts/createSimpleIcons.ts"
   },
   "dependencies": {
     "@dicebear/core": "^9.4.2",
@@ -22,6 +24,7 @@
     "@types/uuid": "^11.0.0",
     "@types/web-push": "^3.6.4",
     "bcryptjs": "^3.0.3",
+    "canvas": "^3.2.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

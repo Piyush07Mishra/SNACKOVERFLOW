@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Users, CalendarDays, Clock, Banknote, Settings, LogOut, Menu, User as UserIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, Clock, Banknote, Settings, LogOut, Menu, User as UserIcon, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,6 +12,7 @@ import { CheckInButton } from "./CheckInButton";
 import { DicebearAvatar } from "./DicebearAvatar";
 import { NotificationCenter } from "./NotificationCenter";
 import { OfflineIndicator } from "./OfflineIndicator";
+import { PWAInstallButton } from "./PWAInstallButton";
 
 interface User {
   id: string;
@@ -91,6 +92,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
             </div>
             <div className="mt-auto p-4 border-t space-y-4">
               <CheckInButton />
+              <PWAInstallButton variant="sidebar" />
               <Link href="/dashboard/profile">
                 <span
                   className={cn(
@@ -144,6 +146,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
             isCollapsed ? "p-2" : "p-4"
           )}>
             <CheckInButton />
+            <PWAInstallButton variant="sidebar" />
             <Link href="/dashboard/profile">
               <span
                 className={cn(
