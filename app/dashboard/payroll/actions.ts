@@ -8,8 +8,6 @@ import { Leave } from "@/lib/models/Leave";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getDaysInMonth, parse, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay } from "date-fns";
-import { emailService } from "@/lib/customEmailService";
-import { emailConfigManager } from "@/lib/emailConfig";
 
 export async function generatePayroll(month: string) {
   const session = await auth();
@@ -156,47 +154,13 @@ export async function generatePayroll(month: string) {
     generatedPayrolls.push({ employee: emp, payroll });
   }
 
-  // Send email notifications to employees if enabled
-  if (emailConfigManager.isNotificationEnabled('payrollProcessed')) {
-    try {
-      console.log(`Sending payroll emails for ${generatedPayrolls.length} employees...`);
-      
-      for (const { employee, payroll } of generatedPayrolls) {
-        await emailService.sendPayrollProcessedEmail(employee, payroll);
-      }
-      
-      console.log(`Payroll processed emails sent to ${generatedPayrolls.length} employees`);
-    } catch (emailError) {
-      console.error('Failed to send payroll emails:', emailError);
-      // Don't throw error - payroll generation should still work even if email fails
-    }
-  }
-
-  // Send approval email to payroll officers if enabled
-  if (emailConfigManager.isNotificationEnabled('payrollApproval')) {
-    try {
-      // Find payroll officers and admins
-      const approvers = await User.find({
-        role: { $in: ['Admin', 'Payroll_Officer'] }
-      });
-
-      for (const approver of approvers) {
-        await emailService.sendPayrollApprovalEmail(
-          generatedPayrolls.map(gp => ({ ...gp.employee, netSalary: gp.payroll.netSalary })),
-          month,
-          approver
-        );
-      }
-
-      console.log(`Payroll approval emails sent to ${approvers.length} approvers`);
-    } catch (emailError) {
-      console.error('Failed to send payroll approval emails:', emailError);
-      // Don't throw error - payroll generation should still work even if email fails
-    }
-  }
+  // Payroll emails disabled - only leave approval emails are sent
+  console.log(`Payroll generated for ${generatedPayrolls.length} employees`);
 
   revalidatePath("/dashboard/payroll");
 }
+
+// Payroll email functions removed - only leave approval emails are sent
 
 export async function processPayment(id: string) {
   const session = await auth();

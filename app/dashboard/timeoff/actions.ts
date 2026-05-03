@@ -23,51 +23,7 @@ export async function applyForLeave(data: any) {
     reason: data.reason,
   });
 
-  // Send email notification to approvers if enabled
-  if (emailConfigManager.isNotificationEnabled('leaveRequest')) {
-    try {
-      // Get employee details
-      const employee = await User.findById(session.user.id);
-      if (!employee) {
-        console.error('Employee not found for email notification');
-        return;
-      }
-
-      // Find the employee's manager first, then fallback to HR/Admin if no manager is set
-      let approvers = [];
-      
-      if (employee.manager) {
-        // Try to find the manager by name
-        const manager = await User.findOne({ 
-          name: employee.manager,
-          role: { $in: ['Admin', 'HR_Officer', 'Payroll_Officer'] }
-        });
-        
-        if (manager) {
-          approvers.push(manager);
-          console.log(`📧 Found manager: ${manager.name}`);
-        }
-      }
-      
-      // If no manager found, send to HR/Admin users
-      if (approvers.length === 0) {
-        approvers = await User.find({
-          role: { $in: ['Admin', 'HR_Officer'] }
-        });
-        console.log(`📧 No manager found, sending to ${approvers.length} HR/Admin users`);
-      }
-
-      // Send email to relevant approvers only
-      for (const approver of approvers) {
-        await emailService.sendLeaveRequestEmail(employee, leave, approver);
-      }
-
-      console.log(`Leave request email sent to ${approvers.length} relevant approver(s)`);
-    } catch (emailError) {
-      console.error('Failed to send leave request email:', emailError);
-      // Don't throw error - leave request should still work even if email fails
-    }
-  }
+  // Leave request emails disabled - only leave approval emails are sent
 
   revalidatePath("/dashboard/timeoff");
 }

@@ -37,11 +37,11 @@ export const defaultEmailSettings: EmailSettings = {
   },
   notifications: {
     leaveApproval: process.env.EMAIL_LEAVE_APPROVAL !== 'false',
-    leaveRequest: process.env.EMAIL_LEAVE_REQUEST !== 'false',
-    payrollProcessed: process.env.EMAIL_PAYROLL_PROCESSED !== 'false',
-    payrollApproval: process.env.EMAIL_PAYROLL_APPROVAL !== 'false',
-    welcomeEmail: process.env.EMAIL_WELCOME !== 'false',
-    passwordReset: process.env.EMAIL_PASSWORD_RESET !== 'false'
+    leaveRequest: false,
+    payrollProcessed: false,
+    payrollApproval: false,
+    welcomeEmail: false,
+    passwordReset: false
   },
   templates: {
     logoUrl: process.env.EMAIL_LOGO_URL || '',

@@ -58,11 +58,11 @@ export default function EmailSettingsClient({ initialLogs, initialStats }: Email
     },
     notifications: {
       leaveApproval: true,
-      leaveRequest: true,
-      payrollProcessed: true,
-      payrollApproval: true,
-      welcomeEmail: true,
-      passwordReset: true
+      leaveRequest: false,
+      payrollProcessed: false,
+      payrollApproval: false,
+      welcomeEmail: false,
+      passwordReset: false
     }
   });
 
@@ -360,30 +360,32 @@ export default function EmailSettingsClient({ initialLogs, initialStats }: Email
             <CardHeader>
               <CardTitle>Email Notifications</CardTitle>
               <CardDescription>
-                Configure which email notifications should be sent
+                Only leave approval emails are enabled
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(emailConfig.notifications).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Label htmlFor={`notify-${key}`} className="capitalize">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {getNotificationDescription(key)}
-                    </p>
-                  </div>
-                  <Switch
-                    id={`notify-${key}`}
-                    checked={value}
-                    onCheckedChange={(checked) => setEmailConfig(prev => ({
-                      ...prev,
-                      notifications: { ...prev.notifications, [key]: checked }
-                    }))}
-                  />
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="notify-leaveApproval">Leave Approval</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Send email to employees when their leave request is approved or rejected
+                  </p>
                 </div>
-              ))}
+                <Switch
+                  id="notify-leaveApproval"
+                  checked={emailConfig.notifications.leaveApproval}
+                  onCheckedChange={(checked) => setEmailConfig(prev => ({
+                    ...prev,
+                    notifications: { ...prev.notifications, leaveApproval: checked }
+                  }))}
+                />
+              </div>
+              
+              <div className="mt-6 p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Note:</strong> All other email notifications (leave requests, payroll, welcome emails, password resets) have been disabled for privacy and performance reasons.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
