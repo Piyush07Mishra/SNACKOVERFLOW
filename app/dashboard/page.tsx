@@ -7,6 +7,7 @@ import { Leave } from "@/lib/models/Leave";
 import { Payroll } from "@/lib/models/Payroll";
 import { format } from "date-fns";
 import { EmployeeGrid } from "@/components/EmployeeGrid";
+import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -38,6 +39,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* PWA Install Banner */}
+      <PWAInstallBanner />
+      
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
         <p className="text-muted-foreground">Welcome to EmPay HRMS. Here's what's happening today.</p>

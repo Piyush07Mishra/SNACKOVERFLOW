@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CheckInButton } from "./CheckInButton";
 import { DicebearAvatar } from "./DicebearAvatar";
 import { NotificationCenter } from "./NotificationCenter";
+import { OfflineIndicator } from "./OfflineIndicator";
 
 interface User {
   id: string;
@@ -200,6 +201,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
           <div className="flex items-center justify-between px-4 md:px-8 py-3">
             <div className="flex-1" />
             <div className="flex items-center gap-2">
+              <OfflineIndicator />
               <NotificationCenter />
             </div>
           </div>
