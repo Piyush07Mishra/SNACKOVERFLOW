@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { KeyRound, ShieldCheck, Loader2, AlertCircle, Building2, CreditCard, Landmark } from "lucide-react";
 import { toast } from "sonner";
+import { PushNotificationSettings } from "@/components/PushNotificationSettings";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
@@ -100,8 +101,11 @@ export default function SettingsPage() {
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
-        <p className="text-muted-foreground">Manage your account security and banking preferences.</p>
+        <p className="text-muted-foreground">Manage your account security, banking preferences, and notifications.</p>
       </div>
+
+      {/* Push Notification Settings */}
+      <PushNotificationSettings />
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Password Card */}

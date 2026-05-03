@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CheckInButton } from "./CheckInButton";
 import { DicebearAvatar } from "./DicebearAvatar";
+import { NotificationCenter } from "./NotificationCenter";
 
 interface User {
   id: string;
@@ -194,6 +195,16 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
         "flex-1 flex flex-col min-h-screen pt-14 md:pt-0 transition-all duration-300 ease-in-out",
         isCollapsed ? "md:ml-16" : "md:ml-64 lg:ml-70"
       )}>
+        {/* Top Bar with Notifications */}
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div className="flex items-center justify-between px-4 md:px-8 py-3">
+            <div className="flex-1" />
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
+            </div>
+          </div>
+        </div>
+        
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
           {children}
         </div>

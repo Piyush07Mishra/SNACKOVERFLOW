@@ -4,6 +4,7 @@ import { Attendance } from '@/lib/models/Attendance';
 import { auth } from '@/auth';
 import { format } from 'date-fns';
 import { rateLimit, setSecurityHeaders, createErrorResponse, createSuccessResponse } from '@/lib/security';
+import { PushNotificationService } from '@/lib/pushService';
 
 // Get client IP for rate limiting
 function getClientIP(req: Request): string {
@@ -48,6 +49,18 @@ export async function POST(req: Request) {
       checkIn: new Date(),
       timerStartTime: new Date(), // Set timer start time
     });
+
+    // Send push notification for successful check-in
+    try {
+      await PushNotificationService.sendAttendanceNotification(
+        session.user.id,
+        'checkin',
+        { checkInTime: attendance.checkIn }
+      );
+    } catch (pushError) {
+      console.error('Push notification error:', pushError);
+      // Don't fail the request if push notification fails
+    }
 
     const response = createSuccessResponse({ 
       success: true,
