@@ -90,7 +90,24 @@ const UserSchema = new mongoose.Schema({
     canApprovePay: { type: Boolean, default: false },
     canManageUsers: { type: Boolean, default: false },
     canViewReports: { type: Boolean, default: false },
-  }
+  },
+
+  // File Uploads
+  profileImage: { 
+    type: String, 
+    default: '' 
+  },
+  
+  documents: [{
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    type: { type: String, required: true }, // 'resume', 'certificate', 'identity', 'other'
+    filePath: { type: String, required: true },
+    fileName: { type: String, required: true },
+    fileSize: { type: Number, required: true },
+    mimeType: { type: String, required: true },
+    uploadedAt: { type: Date, default: Date.now }
+  }]
 }, { timestamps: true });
 
 // Performance and security indexes

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { FileText, Lock, DollarSign, Landmark, Trash2, Plus, Download } from "lucide-react";
+import { FileText, Lock, DollarSign, Landmark, Trash2, Plus, Download, Upload, Image, File, X, User as UserIcon } from "lucide-react";
 import { calculateSalaryComponents, getTotalEarnings, getNetSalary } from "@/lib/salaryCalculations";
 import { generatePDFFromHTML } from "@/lib/pdfGenerator";
 
@@ -61,6 +61,17 @@ interface ProfileData {
     canManageUsers: boolean;
     canViewReports: boolean;
   };
+  profileImage?: string;
+  documents?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    filePath: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+    uploadedAt: string;
+  }>;
 }
 
 interface AdminAccessData {
@@ -108,6 +119,16 @@ export function ProfileClient({
     canManageUsers: false,
     canViewReports: false,
   });
+
+  // File upload states
+  const [isUploading, setIsUploading] = useState(false);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string>("");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentType, setDocumentType] = useState<string>("");
+  const [documentName, setDocumentName] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isAdmin) {
@@ -274,6 +295,139 @@ export function ProfileClient({
     }
   };
 
+  // File upload functions
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        setProfileImageFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setProfileImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        toast.error("Please select an image file");
+      }
+    }
+  };
+
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setDocumentFile(file);
+    }
+  };
+
+  const uploadProfileImage = async () => {
+    if (!profileImageFile) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', profileImageFile);
+      formData.append('type', 'profile');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update profile data with new image path
+        setProfileData(prev => ({
+          ...prev,
+          profileImage: data.filePath
+        }));
+        
+        // Save to database
+        await saveProfile();
+        toast.success("Profile image uploaded successfully!");
+        setProfileImageFile(null);
+        setProfileImagePreview("");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to upload image");
+      }
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+      toast.error("Failed to upload profile image");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const uploadDocument = async () => {
+    if (!documentFile || !documentName || !documentType) {
+      toast.error("Please fill all document fields");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', documentFile);
+      formData.append('type', 'document');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Add document to profile
+        const newDocument = {
+          id: Date.now().toString(),
+          name: documentName,
+          type: documentType,
+          filePath: data.filePath,
+          fileName: data.fileName,
+          fileSize: data.fileSize,
+          mimeType: data.fileType,
+          uploadedAt: new Date().toISOString()
+        };
+
+        setProfileData(prev => ({
+          ...prev,
+          documents: [...(prev.documents || []), newDocument]
+        }));
+
+        // Save to database
+        await saveProfile();
+        toast.success("Document uploaded successfully!");
+        setDocumentFile(null);
+        setDocumentName("");
+        setDocumentType("");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to upload document");
+      }
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      toast.error("Failed to upload document");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const deleteDocument = async (documentId: string) => {
+    try {
+      setProfileData(prev => ({
+        ...prev,
+        documents: prev.documents?.filter(doc => doc.id !== documentId) || []
+      }));
+      
+      await saveProfile();
+      toast.success("Document deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      toast.error("Failed to delete document");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -322,7 +476,7 @@ export function ProfileClient({
 
       <div id="profile-content" className="space-y-6">
         <Tabs defaultValue="resume" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="resume" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Resume
@@ -338,6 +492,10 @@ export function ProfileClient({
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Landmark className="h-4 w-4" />
             Security
+          </TabsTrigger>
+          <TabsTrigger value="uploads" className="flex items-center gap-2">
+            <Upload className="h-4 w-4" />
+            Uploads
           </TabsTrigger>
         </TabsList>
 
@@ -932,6 +1090,234 @@ export function ProfileClient({
                 </CardContent>
               </Card>
             )}
+          </div>
+        </TabsContent>
+
+        {/* Uploads Tab */}
+        <TabsContent value="uploads">
+          <div className="space-y-6">
+            {/* Profile Image Upload */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-5 w-5" />
+                  Profile Image
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-6">
+                  {/* Current Profile Image */}
+                  <div className="relative">
+                    {profileData.profileImage ? (
+                      <img 
+                        src={profileData.profileImage} 
+                        alt="Profile" 
+                        className="w-24 h-24 rounded-full object-cover border-4 border-primary/20"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center border-4 border-primary/20">
+                        <UserIcon className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Controls */}
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfileImageChange}
+                        className="hidden"
+                      />
+                      <Button
+                        onClick={() => fileInputRef.current?.click()}
+                        variant="outline"
+                        disabled={isUploading}
+                        className="gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        {isUploading ? "Uploading..." : "Choose Image"}
+                      </Button>
+                    </div>
+
+                    {profileImagePreview && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Preview:</p>
+                        <img 
+                          src={profileImagePreview} 
+                          alt="Preview" 
+                          className="w-20 h-20 rounded-full object-cover border-2 border-primary/30"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={uploadProfileImage}
+                            disabled={isUploading}
+                            size="sm"
+                            className="gap-2"
+                          >
+                            <Upload className="h-4 w-4" />
+                            {isUploading ? "Uploading..." : "Upload"}
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setProfileImageFile(null);
+                              setProfileImagePreview("");
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                          >
+                            <X className="h-4 w-4" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Document Upload */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <File className="h-5 w-5" />
+                  Documents
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Upload Form */}
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 space-y-4">
+                  <div className="text-center">
+                    <File className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Upload documents like resume, certificates, ID proofs, etc.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Document Type</Label>
+                      <Select value={documentType} onValueChange={setDocumentType}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="resume">Resume</SelectItem>
+                          <SelectItem value="certificate">Certificate</SelectItem>
+                          <SelectItem value="identity">Identity Proof</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Document Name</Label>
+                      <Input
+                        placeholder="e.g., Bachelor's Degree Certificate"
+                        value={documentName}
+                        onChange={(e) => setDocumentName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>File</Label>
+                    <input
+                      ref={documentInputRef}
+                      type="file"
+                      onChange={handleDocumentChange}
+                      className="hidden"
+                    />
+                    <Button
+                      onClick={() => documentInputRef.current?.click()}
+                      variant="outline"
+                      disabled={isUploading}
+                      className="w-full gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {documentFile ? documentFile.name : "Choose File"}
+                    </Button>
+                  </div>
+
+                  {documentFile && documentName && documentType && (
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={uploadDocument}
+                        disabled={isUploading}
+                        className="gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        {isUploading ? "Uploading..." : "Upload Document"}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setDocumentFile(null);
+                          setDocumentName("");
+                          setDocumentType("");
+                        }}
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <X className="h-4 w-4" />
+                        Clear
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Documents List */}
+                {profileData.documents && profileData.documents.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Uploaded Documents</h3>
+                    <div className="grid gap-3">
+                      {profileData.documents.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <File className="h-8 w-8 text-primary" />
+                            <div>
+                              <p className="font-medium">{doc.name}</p>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span className="capitalize">{doc.type}</span>
+                                <span>{(doc.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                                <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(doc.filePath, '_blank')}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteDocument(doc.id)}
+                              className="gap-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(!profileData.documents || profileData.documents.length === 0) && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <File className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No documents uploaded yet</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
       </Tabs>
