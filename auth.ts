@@ -4,6 +4,10 @@ import bcrypt from "bcryptjs";
 import dbConnect from "./lib/mongodb";
 import { User } from "./lib/models/User";
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     CredentialsProvider({
@@ -19,7 +23,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         await dbConnect();
 
-        const user = await User.findOne({ email: credentials.email });
+        const normalizedEmail = normalizeEmail(credentials.email as string);
+
+        const user = await User.findOne({ email: normalizedEmail });
 
         if (!user) {
           return null;
@@ -37,8 +43,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return {
           id: user._id.toString(),
           name: user.name,
-          email: user.email,
+          email: user.email?.toLowerCase(),
           role: user.role,
+          companyId: user.companyId?.toString(),
         };
       }
     })
@@ -48,6 +55,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        token.companyId = (user as any).companyId;
       }
       return token;
     },
@@ -55,12 +63,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         (session.user as any).role = token.role;
+        (session.user as any).companyId = token.companyId;
       }
       return session;
     }
   },
   pages: {
     signIn: "/login",
+    signOut: "/signout",
   },
   session: {
     strategy: "jwt",

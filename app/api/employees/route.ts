@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
+import { Company } from '@/lib/models/Company';
 import { Attendance } from '@/lib/models/Attendance';
 import { Leave } from '@/lib/models/Leave';
 import { Payroll } from '@/lib/models/Payroll';
@@ -18,21 +19,35 @@ export async function GET() {
 
   try {
     await dbConnect();
+    
+    // Get the current user to find their companyId
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const currentUser = await User.findById(session.user.id);
+    if (!currentUser || !currentUser.companyId) {
+      return NextResponse.json({ error: 'User company not found. Please contact administrator.' }, { status: 400 });
+    }
+    
     const today = format(new Date(), 'yyyy-MM-dd');
     const currentMonth = format(new Date(), 'yyyy-MM');
 
-    // Get all users who are not Admin
-    const users = await User.find({ role: { $ne: 'Admin' } }).sort({ name: 1 }).lean();
+    // Get all users who are not Admin and belong to the same company
+    const users = await User.find({ 
+      role: { $ne: 'Admin' }, 
+      companyId: currentUser.companyId 
+    }).sort({ name: 1 }).lean();
     
     // Get today's attendance, active leaves, and current month payrolls
     const [attendances, leaves, payrolls] = await Promise.all([
-      Attendance.find({ date: today }).lean(),
+      Attendance.find({ date: today, companyId: currentUser.companyId }).lean(),
       Leave.find({ 
+        companyId: currentUser.companyId,
         startDate: { $lte: new Date() }, 
         endDate: { $gte: new Date() },
         status: 'Approved' 
       }).lean(),
-      Payroll.find({ month: currentMonth }).lean()
+      Payroll.find({ month: currentMonth, companyId: currentUser.companyId }).lean()
     ]);
 
     const employees = users.map((user: any) => {
@@ -54,6 +69,7 @@ export async function GET() {
         role: user.role,
         designation: user.designation,
         department: user.department,
+        basicSalary: user.basicSalary || 0,
         status,
         payroll: payroll ? {
           netSalary: payroll.netSalary,

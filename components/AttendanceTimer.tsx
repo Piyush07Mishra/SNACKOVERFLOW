@@ -23,7 +23,7 @@ export function AttendanceTimer({ todayRecord, onAction }: {
   todayRecord: AttendanceRecord | null, 
   onAction: (action: string, data?: any) => Promise<void> 
 }) {
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [breakElapsedTime, setBreakElapsedTime] = useState(0);
   const [isEditingNote, setIsEditingNote] = useState(false);
@@ -31,6 +31,7 @@ export function AttendanceTimer({ todayRecord, onAction }: {
 
   // Update current time every second
   useEffect(() => {
+    setCurrentTime(new Date());
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -94,16 +95,20 @@ export function AttendanceTimer({ todayRecord, onAction }: {
           <div className="space-y-4">
             {/* Current Time Display */}
             <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="text-3xl font-mono font-bold text-primary">
-                {currentTime.toLocaleTimeString()}
+              <div className="text-3xl font-mono font-bold text-primary" suppressHydrationWarning>
+                {currentTime
+                  ? currentTime.toLocaleTimeString()
+                  : '--:--:--'}
               </div>
-              <div className="text-sm text-muted-foreground">
-                {currentTime.toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+              <div className="text-sm text-muted-foreground" suppressHydrationWarning>
+                {currentTime
+                  ? currentTime.toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })
+                  : 'Loading current date...'}
               </div>
             </div>
 

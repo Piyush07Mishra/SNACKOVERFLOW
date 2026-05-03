@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,15 @@ interface PayrollRecord {
 
 export function PayrollEmployeeClient({ records, employeeName = "Employee" }: { records: PayrollRecord[], employeeName?: string }) {
   const [selectedPayslip, setSelectedPayslip] = useState<PayrollRecord | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="min-h-[24rem] rounded-xl border bg-muted/20" />;
+  }
 
   const formatMonth = (monthStr: string) => {
     try {

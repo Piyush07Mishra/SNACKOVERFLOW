@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, Users, CalendarDays, Clock, Banknote, Settings, LogOut, Menu, User as UserIcon } from "lucide-react";
@@ -32,18 +33,28 @@ const navItems = [
 
 export function DashboardLayout({ children, user }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="min-h-screen bg-background" />;
+  }
 
   const handleLogout = async () => {
-    // Call next-auth signout via route or action
-    window.location.href = "/api/auth/signout";
+    window.location.href = "/signout";
   };
+
+  const isEmployee = user.role === 'Employee';
 
   const NavLinks = () => (
     <div className="flex flex-col gap-2">
       {navItems.map((item) => {
         // Simple role check
         if (item.name === "Dashboard" && !["Admin", "HR_Officer"].includes(user.role || "")) return null;
-        if (item.name === "Settings" && user.role !== "Admin") return null;
+        if (item.name === "Attendance" && !["Employee", "Admin", "HR_Officer", "Payroll_Officer"].includes(user.role || "")) return null;
 
         const isActive = pathname.startsWith(item.href);
         return (
@@ -83,7 +94,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
               <NavLinks />
             </div>
             <div className="mt-auto p-4 border-t space-y-4">
-              <CheckInButton />
+              {isEmployee && <CheckInButton />}
               <Link href="/dashboard/profile">
                 <span
                   className={cn(
@@ -114,7 +125,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
             </nav>
           </div>
           <div className="mt-auto p-4 border-t space-y-4">
-            <CheckInButton />
+            {isEmployee && <CheckInButton />}
             <Link href="/dashboard/profile">
               <span
                 className={cn(

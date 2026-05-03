@@ -2,12 +2,13 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
+import { Company } from "@/lib/models/Company";
 import { ProfileClient } from "./client";
 
 export default async function ProfilePage({
   searchParams,
 }: {
-  searchParams: { userId?: string };
+  searchParams: Promise<{ userId?: string }>;
 }) {
   const session = await auth();
 
@@ -16,11 +17,13 @@ export default async function ProfilePage({
   }
 
   await connectDB();
-  const currentUser = await User.findOne({ email: session.user.email }).lean();
+  const currentUser = await User.findById(session.user.id).lean();
 
   if (!currentUser) {
     redirect("/login");
   }
+
+  const company = currentUser.companyId ? await Company.findById(currentUser.companyId).lean() : null;
 
   const currentUserIsAdmin = currentUser.role === "Admin";
   const currentUserIsPayrollOfficer = currentUser.role === "Payroll_Officer";
@@ -30,8 +33,9 @@ export default async function ProfilePage({
   let viewingUser = currentUser;
   let isOtherUserProfile = false;
 
-  if (searchParams.userId && (currentUserIsAdmin || currentUserIsPayrollOfficer)) {
-    const otherUser = await User.findById(searchParams.userId).lean();
+  const { userId } = await searchParams;
+  if (userId && (currentUserIsAdmin || currentUserIsPayrollOfficer)) {
+    const otherUser = await User.findOne({ _id: userId, companyId: currentUser.companyId }).lean();
     if (otherUser) {
       viewingUser = otherUser;
       isOtherUserProfile = true;
@@ -62,7 +66,10 @@ export default async function ProfilePage({
 
   return (
     <ProfileClient
-      initialData={JSON.parse(JSON.stringify(viewingUser))}
+      initialData={JSON.parse(JSON.stringify({
+        ...viewingUser,
+        company: company?.name || viewingUser.company || "",
+      }))}
       isAdmin={isAdmin}
       canEditSalary={canEditSalary}
       canEditRole={canEditRole}

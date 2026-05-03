@@ -15,15 +15,20 @@ export default async function PayrollPage() {
 
   await dbConnect();
 
+  const sessionUser = await User.findById(session?.user?.id).lean();
+  if (!sessionUser || !sessionUser.companyId) {
+    throw new Error("Could not determine current user's company. Please contact administrator.");
+  }
+
   // Admin/Payroll Officer view - see all employees
   if (["Admin", "Payroll_Officer"].includes(userRole)) {
     const currentMonth = format(new Date(), "yyyy-MM");
     
-    // Fetch all employees (excluding Admins)
-    const employees = await User.find({ role: { $ne: 'Admin' } }).lean();
+    // Fetch all employees for this company (excluding Admins)
+    const employees = await User.find({ role: { $ne: 'Admin' }, companyId: sessionUser.companyId }).lean();
     
-    // Fetch payroll records for current month
-    const payrollRecords = await Payroll.find({ month: currentMonth }).lean();
+    // Fetch payroll records for current month scoped to the same company
+    const payrollRecords = await Payroll.find({ month: currentMonth, companyId: sessionUser.companyId }).lean();
     
     // Create a map for quick payroll lookup
     const payrollMap = new Map(
@@ -70,8 +75,11 @@ export default async function PayrollPage() {
   }
 
   // Employee view - see their own payroll records
-  const currentUser = await User.findOne({ email: userEmail }).lean();
-  const employeePayrollRecords = await Payroll.find({ user: currentUser?._id }).sort({ month: -1 }).lean();
+  const currentUser = await User.findById(session?.user?.id).lean();
+  const employeePayrollRecords = await Payroll.find({
+    user: currentUser?._id,
+    companyId: sessionUser.companyId,
+  }).sort({ month: -1 }).lean();
 
   const serializedEmployeeRecords = employeePayrollRecords.map((rec: any) => ({
     id: rec._id.toString(),

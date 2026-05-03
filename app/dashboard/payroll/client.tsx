@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,15 @@ export function PayrollClient({ employees, currentMonth }: { employees: any[], c
   const [loading, setLoading] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="min-h-[24rem] rounded-xl border bg-muted/20" />;
+  }
 
   async function handleGenerate() {
     setLoading(true);

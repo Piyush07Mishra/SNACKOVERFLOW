@@ -28,12 +28,25 @@ export default async function DashboardPage() {
   
   const today = format(new Date(), "yyyy-MM-dd");
   const currentMonth = format(new Date(), "yyyy-MM");
+  const companyId = (session?.user as any)?.companyId;
+
+  const companyFilter = companyId ? { companyId } : {};
+
+  const attendanceMatch = {
+    date: today,
+    status: { $in: ['Present', 'Half_Day'] },
+    ...companyFilter,
+  };
 
   const [totalEmployees, presentToday, pendingLeaves, pendingPayroll] = await Promise.all([
-    User.countDocuments({ role: { $ne: 'Admin' } }),
-    Attendance.countDocuments({ date: today, status: { $in: ['Present', 'Half_Day'] } }),
-    Leave.countDocuments({ status: 'Pending' }),
-    Payroll.countDocuments({ month: currentMonth, status: 'Pending' }),
+    User.countDocuments({ role: { $ne: 'Admin' }, ...companyFilter }),
+    Attendance.aggregate([
+      { $match: attendanceMatch },
+      { $group: { _id: '$user' } },
+      { $count: 'presentCount' },
+    ]).then((result) => (result[0]?.presentCount ?? 0)),
+    Leave.countDocuments({ status: 'Pending', ...companyFilter }),
+    Payroll.countDocuments({ month: currentMonth, status: 'Pending', ...companyFilter }),
   ]);
 
   return (

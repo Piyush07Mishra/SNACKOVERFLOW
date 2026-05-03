@@ -1,3 +1,4 @@
+import { auth } from '@/auth';
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
@@ -7,6 +8,11 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, parse } from 'date
 
 export async function GET(request: Request) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const employeeId = searchParams.get('employeeId');
     const month = searchParams.get('month');
@@ -17,10 +23,21 @@ export async function GET(request: Request) {
 
     await dbConnect();
 
+    const currentUser = await User.findById(session.user.id);
+    if (!currentUser?.companyId) {
+      return NextResponse.json({ error: 'User company not found' }, { status: 400 });
+    }
+
     // Get employee details
-    const employee = await User.findById(employeeId);
+    const employee = await User.findOne({ _id: employeeId, companyId: currentUser.companyId });
     if (!employee) {
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
+    const sessionRole = (session?.user as any)?.role;
+    const canViewOtherEmployee = ['Admin', 'Payroll_Officer', 'HR_Officer'].includes(sessionRole);
+    if (employee._id.toString() !== session.user.id && !canViewOtherEmployee) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Parse month and get date range
@@ -32,12 +49,14 @@ export async function GET(request: Request) {
     // Fetch attendance records for the month
     const attendanceRecords = await Attendance.find({
       user: employeeId,
+      companyId: currentUser.companyId,
       date: { $gte: format(monthStart, 'yyyy-MM-dd'), $lte: format(monthEnd, 'yyyy-MM-dd') }
     }).lean();
 
     // Fetch approved leaves for the month
     const leaves = await Leave.find({
       user: employeeId,
+      companyId: currentUser.companyId,
       status: 'Approved',
       $or: [
         { startDate: { $gte: monthStart, $lte: monthEnd } },

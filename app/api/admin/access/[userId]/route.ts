@@ -11,12 +11,12 @@ export async function GET(
     const { userId } = await params;
     const session = await auth();
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
-    const admin = await User.findOne({ email: session.user.email });
+    const admin = await User.findById(session.user.id);
 
     if (admin?.role !== "Admin") {
       return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
@@ -26,6 +26,11 @@ export async function GET(
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Check if both users belong to the same company
+    if (admin.companyId?.toString() !== user.companyId?.toString()) {
+      return NextResponse.json({ error: "Cannot manage users from different companies" }, { status: 403 });
     }
 
     return NextResponse.json(user.adminPermissions || {});
@@ -43,15 +48,25 @@ export async function PUT(
     const { userId } = await params;
     const session = await auth();
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
-    const admin = await User.findOne({ email: session.user.email });
+    const admin = await User.findById(session.user.id);
 
     if (admin?.role !== "Admin") {
       return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
+
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Check if both users belong to the same company
+    if (admin.companyId?.toString() !== targetUser.companyId?.toString()) {
+      return NextResponse.json({ error: "Cannot manage users from different companies" }, { status: 403 });
     }
 
     const { adminPermissions } = await request.json();

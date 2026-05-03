@@ -65,8 +65,8 @@ export default function SettingsPage() {
       return;
     }
 
-    if (formData.newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters long");
+    if (formData.newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters long");
       return;
     }
 
@@ -114,7 +114,9 @@ export default function SettingsPage() {
               </div>
               <div>
                 <CardTitle>Change Password</CardTitle>
-                <CardDescription>Update your security credentials.</CardDescription>
+                <CardDescription>
+                  Update your security credentials. Use the temporary password you received by email as your current password.
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -166,11 +168,11 @@ export default function SettingsPage() {
 
         {/* Bank Details Card */}
         <Card className="border-border/50 bg-card/50 backdrop-blur-xl overflow-hidden h-fit">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/50 via-blue-500 to-blue-500/50" />
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Building2 className="h-5 w-5 text-blue-500" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Building2 className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <CardTitle>Bank Details</CardTitle>
@@ -232,7 +234,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
             <CardFooter className="bg-muted/30 border-t border-border/50 py-4 mt-4">
-              <Button type="submit" disabled={bankLoading} className="w-full gap-2 bg-blue-600 hover:bg-blue-700">
+              <Button type="submit" disabled={bankLoading} className="w-full gap-2">
                 {bankLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Building2 className="h-4 w-4" />}
                 Save Bank Details
               </Button>

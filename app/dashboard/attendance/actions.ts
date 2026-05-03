@@ -2,6 +2,7 @@
 
 import dbConnect from "@/lib/mongodb";
 import { Attendance } from "@/lib/models/Attendance";
+import { User } from "@/lib/models/User";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { format, differenceInMinutes } from "date-fns";
@@ -19,6 +20,12 @@ export async function checkIn() {
     await dbConnect();
     const today = format(new Date(), "yyyy-MM-dd");
 
+    const currentUser = await User.findById(session.user.id);
+    if (!currentUser || !currentUser.companyId) {
+      logger.error("Unable to locate current user for attendance check-in", session.user.id, undefined, "checkin");
+      throw new Error("Unable to complete check-in. Please contact administrator.");
+    }
+
     const existing = await Attendance.findOne({ user: session.user.id, date: today });
     if (existing) {
       logger.warn("Duplicate check-in attempt", session.user.id, undefined, "checkin", {
@@ -29,6 +36,8 @@ export async function checkIn() {
     }
 
     const attendance = await Attendance.create({
+      companyId: currentUser.companyId,
+      employeeId: currentUser.employeeId || '',
       user: session.user.id,
       date: today,
       status: "Present",

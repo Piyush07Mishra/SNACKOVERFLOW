@@ -1,8 +1,11 @@
 import dbConnect from "@/lib/mongodb";
 import { Attendance } from "@/lib/models/Attendance";
+import { AttendanceSession } from "@/lib/models/AttendanceSession";
+import { User } from "@/lib/models/User";
 import { auth } from "@/auth";
 import { AttendanceClient } from "./client";
 import { format, startOfMonth, endOfMonth } from "date-fns";
+import QRCode from "qrcode";
 
 export default async function AttendancePage() {
   const session = await auth();
@@ -14,14 +17,55 @@ export default async function AttendancePage() {
   const today = format(new Date(), "yyyy-MM-dd");
   let attendanceRecords = [];
   let todayRecord = null;
+  let checkInUrl: string | null = null;
+  let qrDataUrl: string | null = null;
+  let hasActiveSession = false;
 
   const isAdminOrOfficer = ["Admin", "HR_Officer", "Payroll_Officer"].includes(userRole);
 
+  if (!isAdminOrOfficer && userId) {
+    const currentUser = await User.findById(userId).select("employeeId companyId").lean();
+    const employeeId = currentUser?.employeeId || "";
+    if (employeeId) {
+      checkInUrl = `/attendance/checkin?empId=${encodeURIComponent(employeeId)}`;
+      const origin = process.env.NEXTAUTH_URL || "http://localhost:3000";
+      qrDataUrl = await QRCode.toDataURL(`${origin}${checkInUrl}`);
+      hasActiveSession = !!(await AttendanceSession.findOne({
+        companyId: currentUser.companyId,
+        employeeId,
+        status: 'ACTIVE',
+      }).lean());
+    }
+  }
+
   if (isAdminOrOfficer) {
-    // Admin/Officers see attendance of all employees present on current day
-    attendanceRecords = await Attendance.find({ date: today })
-      .populate("user", "name email employeeId")
+    // Admin/Officers see a full attendance list of all company employees for today.
+    const companyId = (session?.user as any)?.companyId;
+    const employees = await User.find({ companyId, role: { $ne: 'Admin' } })
+      .select('name email employeeId')
       .lean();
+
+    const todayAttendance = await Attendance.find({ date: today, companyId })
+      .select('user status checkIn checkOut totalWorkingHours breaks notes employeeId')
+      .lean();
+
+    const attendanceByUser = new Map(todayAttendance.map((record: any) => [record.user.toString(), record]));
+
+    attendanceRecords = employees.map((employee) => {
+      const attendance = attendanceByUser.get(employee._id.toString());
+      return {
+        _id: attendance?._id || employee._id,
+        user: employee,
+        employeeId: employee.employeeId,
+        date: today,
+        status: attendance?.status || 'Absent',
+        checkIn: attendance?.checkIn || null,
+        checkOut: attendance?.checkOut || null,
+        totalWorkingHours: attendance?.totalWorkingHours || 0,
+        breaks: attendance?.breaks || [],
+        notes: attendance?.notes || '',
+      };
+    });
   } else {
     // Employees see day-wise attendance of themselves for ongoing month
     const start = format(startOfMonth(new Date()), "yyyy-MM-dd");
@@ -79,6 +123,9 @@ export default async function AttendancePage() {
         records={serializedRecords} 
         todayRecord={serializedTodayRecord} 
         isEmployee={!isAdminOrOfficer} 
+        checkInUrl={checkInUrl}
+        qrDataUrl={qrDataUrl}
+        hasActiveSession={hasActiveSession}
       />
     </div>
   );

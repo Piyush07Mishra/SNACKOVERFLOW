@@ -89,16 +89,51 @@ export function ProfileClient({
   isOtherUserProfile = false,
   userRole 
 }: ProfileClientProps) {
-  const [profileData, setProfileData] = useState<ProfileData>(initialData);
+  // Debug: Log initial data to see what's being passed
+  console.log('ProfileClient initialData:', initialData);
+  console.log('isOtherUserProfile:', isOtherUserProfile);
+  console.log('canEditSalary:', canEditSalary);
+
+  const normalizedInitialData: ProfileData = {
+    ...initialData,
+    bankDetails: initialData.bankDetails ?? {
+      bankName: '',
+      accountNumber: '',
+      ifscCode: '',
+      branchName: '',
+      panNo: '',
+      uanNo: '',
+    },
+  };
+  
+  const [profileData, setProfileData] = useState<ProfileData>(normalizedInitialData);
   const [isSaving, setIsSaving] = useState(false);
-  const [salaryComponents, setSalaryComponents] = useState<SalaryComponent[]>(
-    (initialData.salaryComponents || []).map((comp) => ({
+  const [salaryComponents, setSalaryComponents] = useState<SalaryComponent[]>(() => {
+    const components = normalizedInitialData.salaryComponents || [];
+    console.log('Initial salary components:', components);
+    
+    if (components.length === 0 && normalizedInitialData.basicSalary > 0) {
+      // Add default Basic component if no components exist
+      const defaultComponents = [{
+        name: "Basic",
+        computationType: "Fixed" as const,
+        value: normalizedInitialData.basicSalary,
+        calculatedValue: normalizedInitialData.basicSalary,
+        basisComponent: ""
+      }];
+      console.log('Created default components:', defaultComponents);
+      return defaultComponents;
+    }
+    
+    const processedComponents = components.map((comp) => ({
       ...comp,
       calculatedValue: comp.calculatedValue ?? 0,
-    }))
-  );
+    }));
+    console.log('Processed components:', processedComponents);
+    return processedComponents;
+  });
   const [salaryConfig, setSalaryConfig] = useState<SalaryConfig>(
-    initialData.salaryConfig || { pfRate: 12, professionalTax: 200 }
+    normalizedInitialData.salaryConfig || { pfRate: 12, professionalTax: 200 }
   );
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -147,14 +182,21 @@ export function ProfileClient({
   const saveProfile = async () => {
     setIsSaving(true);
     try {
+      const requestBody: any = {
+        ...profileData,
+        salaryComponents,
+        salaryConfig,
+      };
+
+      // If editing another user's profile, include the userId
+      if (isOtherUserProfile) {
+        requestBody.userId = profileData._id;
+      }
+
       const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...profileData,
-          salaryComponents,
-          salaryConfig,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
@@ -203,11 +245,32 @@ export function ProfileClient({
   };
 
   useEffect(() => {
-    // Recalculate whenever wage changes
+    // Recalculate whenever wage changes or when viewing a different user
     if (profileData.basicSalary > 0) {
       calculateComponents();
     }
-  }, [profileData.basicSalary]);
+  }, [profileData.basicSalary, isOtherUserProfile]);
+
+  // Initialize salary components when viewing another user
+  useEffect(() => {
+    if (isOtherUserProfile && initialData.salaryComponents && salaryComponents.length === 0) {
+      const initializedComponents = initialData.salaryComponents.map((comp) => ({
+        ...comp,
+        calculatedValue: comp.calculatedValue ?? 0,
+      }));
+      setSalaryComponents(initializedComponents);
+    }
+  }, [isOtherUserProfile, initialData.salaryComponents]);
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="min-h-[32rem] rounded-xl border bg-muted/20" />;
+  }
 
   const handleAddComponent = () => {
     const newComponent: SalaryComponent = {
@@ -384,9 +447,8 @@ export function ProfileClient({
                   <Label>Company</Label>
                   <Input
                     value={profileData.company}
-                    onChange={(e) => handleProfileChange("company", e.target.value)}
-                    disabled={!canEditProfile}
-                    className={!canEditProfile ? "bg-muted cursor-not-allowed" : ""}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">

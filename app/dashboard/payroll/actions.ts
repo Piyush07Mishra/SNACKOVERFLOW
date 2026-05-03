@@ -16,8 +16,17 @@ export async function generatePayroll(month: string) {
   }
 
   await dbConnect();
+  
+  // Get the current user to find their companyId
+  const currentUser = await User.findById(session.user?.id);
+  if (!currentUser || !currentUser.companyId) {
+    throw new Error("User company not found. Please contact administrator.");
+  }
 
-  const employees = await User.find({ role: { $ne: 'Admin' } });
+  const employees = await User.find({ 
+    role: { $ne: 'Admin' },
+    companyId: currentUser.companyId 
+  });
   const targetDate = parse(month, "yyyy-MM", new Date());
   const totalDaysInMonth = getDaysInMonth(targetDate);
   const start = startOfMonth(targetDate);
@@ -100,6 +109,8 @@ export async function generatePayroll(month: string) {
       console.warn(`Invalid salary data for employee ${emp.name}: basicSalary=${basicSalary}, totalDaysInMonth=${totalDaysInMonth}`);
       // Create payroll with zero values for employees with invalid salary
       await Payroll.create({
+        companyId: emp.companyId,
+        employeeId: emp.employeeId || '',
         user: emp._id,
         month,
         basicSalary: 0,
@@ -133,6 +144,8 @@ export async function generatePayroll(month: string) {
     const netSalary = Math.max(0, totalEarnings - totalDeductions);
 
     await Payroll.create({
+      companyId: emp.companyId,
+      employeeId: emp.employeeId || '',
       user: emp._id,
       month,
       basicSalary: emp.basicSalary,

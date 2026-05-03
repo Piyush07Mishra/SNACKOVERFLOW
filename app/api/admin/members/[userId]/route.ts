@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
 import { Attendance } from '@/lib/models/Attendance';
+import { AttendanceSession } from '@/lib/models/AttendanceSession';
 import { Payroll } from '@/lib/models/Payroll';
 import { Leave } from '@/lib/models/Leave';
 import { auth } from '@/auth';
@@ -21,10 +22,11 @@ function hasAdminPermissions(role: string): boolean {
 }
 
 export async function DELETE(
-  req: Request,
-  { params }: { params: { userId: string } }
+  req: NextRequest,
+  context: { params: Promise<{ userId: string }> }
 ) {
   const session = await auth();
+  const { userId } = await context.params;
   if (!session?.user?.id) {
     const response = createErrorResponse('Unauthorized', 401);
     return setSecurityHeaders(response);
@@ -33,7 +35,7 @@ export async function DELETE(
   // Check admin permissions
   if (!hasAdminPermissions((session.user as any)?.role || '')) {
     logger.security('Unauthorized member deletion attempt', session.user.id, getClientIP(req), 'delete-member', {
-      targetUserId: params.userId,
+      targetUserId: userId,
       userRole: (session.user as any)?.role
     });
     const response = createErrorResponse('Insufficient permissions', 403);
@@ -49,7 +51,7 @@ export async function DELETE(
     }
 
     await dbConnect();
-    const targetUserId = params.userId;
+    const targetUserId = userId;
 
     // Validate target user ID
     if (!targetUserId || targetUserId === session.user.id) {
@@ -79,11 +81,13 @@ export async function DELETE(
     const deleteResults: {
       user: any;
       attendance: number;
+      attendanceSessions: number;
       payroll: number;
       leave: number;
     } = {
       user: null,
       attendance: 0,
+      attendanceSessions: 0,
       payroll: 0,
       leave: 0
     };
@@ -91,6 +95,10 @@ export async function DELETE(
     // Delete attendance records
     const attendanceDelete = await Attendance.deleteMany({ user: targetUserId });
     deleteResults.attendance = attendanceDelete.deletedCount || 0;
+
+    // Delete attendance session records
+    const attendanceSessionDelete = await AttendanceSession.deleteMany({ userId: targetUserId });
+    deleteResults.attendanceSessions = attendanceSessionDelete.deletedCount || 0;
 
     // Delete payroll records
     const payrollDelete = await Payroll.deleteMany({ user: targetUserId });
@@ -125,6 +133,7 @@ export async function DELETE(
       deletedUser: deleteResults.user,
       deletedRecords: {
         attendance: deleteResults.attendance,
+        attendanceSessions: deleteResults.attendanceSessions,
         payroll: deleteResults.payroll,
         leave: deleteResults.leave
       }
@@ -134,7 +143,7 @@ export async function DELETE(
 
   } catch (error: any) {
     logger.error('Member deletion failed', session.user.id, getClientIP(req), 'delete-member', error, {
-      targetUserId: params.userId
+      targetUserId: userId
     });
     
     const response = createErrorResponse('Internal server error', 500);
