@@ -125,10 +125,10 @@ export function EmployeeGrid() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Payoff</span>
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Base Salary</span>
                     <div className="flex items-center gap-1 text-xs font-bold text-primary">
                       <IndianRupee className="h-3 w-3" />
-                      <span>{employee.payroll ? employee.payroll.netSalary.toLocaleString() : '---'}</span>
+                      <span>{employee.payroll?.netSalary?.toLocaleString() || '0'}</span>
                     </div>
                   </div>
                 </div>

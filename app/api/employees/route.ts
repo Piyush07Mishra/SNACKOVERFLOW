@@ -47,18 +47,19 @@ export async function GET() {
         status = 'leave';
       }
 
+      
       return {
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        designation: user.designation,
+        designation: user.jobPosition,
         department: user.department,
         status,
-        payroll: payroll ? {
-          netSalary: payroll.netSalary,
-          status: payroll.status
-        } : null
+        payroll: {
+          netSalary: user.basicSalary || 0,
+          status: payroll ? payroll.status : 'Base Salary'
+        }
       };
     });
 
