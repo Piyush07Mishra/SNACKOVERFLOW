@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { ProfileClient } from "./client";
+import { DynamicPageTitle } from "@/components/DynamicPageTitle";
+import { generateMetadata as generatePageMetadata } from "@/lib/getPageTitle";
+import { Metadata } from "next";
+
 
 export default async function ProfilePage({
   searchParams,
@@ -61,14 +65,21 @@ export default async function ProfilePage({
   }
 
   return (
-    <ProfileClient
-      initialData={JSON.parse(JSON.stringify(viewingUser))}
-      isAdmin={isAdmin}
-      canEditSalary={canEditSalary}
-      canEditRole={canEditRole}
-      canEditProfile={canEditProfile}
-      isOtherUserProfile={isOtherUserProfile}
-      userRole={currentUser.role}
-    />
+    <>
+      <DynamicPageTitle 
+        userName={viewingUser.name}
+        employeeId={viewingUser.employeeId}
+        customTitle={isOtherUserProfile ? `${viewingUser.name}'s Profile` : viewingUser.name ? `Profile: ${viewingUser.name}` : 'Profile'}
+      />
+      <ProfileClient
+        initialData={JSON.parse(JSON.stringify(viewingUser))}
+        isAdmin={isAdmin}
+        canEditSalary={canEditSalary}
+        canEditRole={canEditRole}
+        canEditProfile={canEditProfile}
+        isOtherUserProfile={isOtherUserProfile}
+        userRole={currentUser.role}
+      />
+    </>
   );
 }

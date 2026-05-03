@@ -8,6 +8,7 @@ import { Payroll } from "@/lib/models/Payroll";
 import { format } from "date-fns";
 import { EmployeeGrid } from "@/components/EmployeeGrid";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
+import { DynamicPageTitle } from "@/components/DynamicPageTitle";
 
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -39,6 +40,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      <DynamicPageTitle customTitle="Dashboard Overview" />
+      
       {/* PWA Install Banner */}
       <PWAInstallBanner />
       
