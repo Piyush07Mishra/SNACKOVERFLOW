@@ -8,6 +8,8 @@ import { Leave } from "@/lib/models/Leave";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getDaysInMonth, parse, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay } from "date-fns";
+import { emailService } from "@/lib/customEmailService";
+import { emailConfigManager } from "@/lib/emailConfig";
 
 export async function generatePayroll(month: string) {
   const session = await auth();
@@ -22,6 +24,8 @@ export async function generatePayroll(month: string) {
   const totalDaysInMonth = getDaysInMonth(targetDate);
   const start = startOfMonth(targetDate);
   const end = endOfMonth(targetDate);
+
+  const generatedPayrolls = [];
 
   for (const emp of employees) {
     const existing = await Payroll.findOne({ user: emp._id, month });
@@ -132,7 +136,7 @@ export async function generatePayroll(month: string) {
     const totalDeductions = pfDeduction + professionalTax;
     const netSalary = Math.max(0, totalEarnings - totalDeductions);
 
-    await Payroll.create({
+    const payroll = await Payroll.create({
       user: emp._id,
       month,
       basicSalary: emp.basicSalary,
@@ -148,6 +152,47 @@ export async function generatePayroll(month: string) {
       netSalary: Math.round(netSalary * 100) / 100,
       status: 'Processed'
     });
+
+    generatedPayrolls.push({ employee: emp, payroll });
+  }
+
+  // Send email notifications to employees if enabled
+  if (emailConfigManager.isNotificationEnabled('payrollProcessed')) {
+    try {
+      console.log(`Sending payroll emails for ${generatedPayrolls.length} employees...`);
+      
+      for (const { employee, payroll } of generatedPayrolls) {
+        await emailService.sendPayrollProcessedEmail(employee, payroll);
+      }
+      
+      console.log(`Payroll processed emails sent to ${generatedPayrolls.length} employees`);
+    } catch (emailError) {
+      console.error('Failed to send payroll emails:', emailError);
+      // Don't throw error - payroll generation should still work even if email fails
+    }
+  }
+
+  // Send approval email to payroll officers if enabled
+  if (emailConfigManager.isNotificationEnabled('payrollApproval')) {
+    try {
+      // Find payroll officers and admins
+      const approvers = await User.find({
+        role: { $in: ['Admin', 'Payroll_Officer'] }
+      });
+
+      for (const approver of approvers) {
+        await emailService.sendPayrollApprovalEmail(
+          generatedPayrolls.map(gp => ({ ...gp.employee, netSalary: gp.payroll.netSalary })),
+          month,
+          approver
+        );
+      }
+
+      console.log(`Payroll approval emails sent to ${approvers.length} approvers`);
+    } catch (emailError) {
+      console.error('Failed to send payroll approval emails:', emailError);
+      // Don't throw error - payroll generation should still work even if email fails
+    }
   }
 
   revalidatePath("/dashboard/payroll");
