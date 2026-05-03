@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CheckInButton } from "./CheckInButton";
+import { DicebearAvatar } from "./DicebearAvatar";
 
 interface User {
   id: string;
@@ -127,9 +128,12 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
               </span>
             </Link>
             <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
-              </Avatar>
+              <DicebearAvatar 
+                seed={user.email || user.id} 
+                name={user.name || "User"} 
+                size={36}
+                className="h-9 w-9" 
+              />
               <div className="flex flex-col overflow-hidden">
                 <span className="truncate text-sm font-medium">{user.name}</span>
                 <span className="truncate text-xs text-muted-foreground">{user.role}</span>
