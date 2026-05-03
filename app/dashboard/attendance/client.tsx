@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { checkIn, checkOut, startBreak, endBreak, updateAttendanceNote } from "./actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, LogIn, LogOut, Coffee, Calendar, TableIcon, Users } from "lucide-react";
+import { Clock, LogIn, LogOut, Coffee, Calendar, TableIcon, Users, Search } from "lucide-react";
 import { AttendanceTimer } from "@/components/AttendanceTimer";
 import { AttendanceTable } from "@/components/AttendanceTable";
 import { AdminAttendanceCalendar } from "@/components/AdminAttendanceCalendar";
@@ -16,6 +18,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export function AttendanceClient({ records, todayRecord, isEmployee }: { records: any[], todayRecord: any, isEmployee: boolean }) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   async function handleAction(action: string, data?: any) {
     setLoading(true);
@@ -53,7 +58,24 @@ export function AttendanceClient({ records, todayRecord, isEmployee }: { records
     }
   }
 
-  
+  // Filter and pagination logic
+  const filteredRecords = records.filter(record => 
+    record.date.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (record.userName && record.userName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (record.userEmail && record.userEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    record.status.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredRecords.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedRecords = filteredRecords.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, pageSize]);
+
   return (
     <div className="space-y-6">
       {isEmployee && (
@@ -80,6 +102,17 @@ export function AttendanceClient({ records, todayRecord, isEmployee }: { records
         </TabsList>
 
         <TabsContent value="overview">
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search by date, employee name, email, or status..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
           <div className="rounded-xl border shadow-sm overflow-hidden">
             <Table>
               <TableHeader className="bg-muted/50">
@@ -95,7 +128,7 @@ export function AttendanceClient({ records, todayRecord, isEmployee }: { records
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {records.map((record) => (
+                {paginatedRecords.map((record) => (
                   <TableRow key={record.id} className="hover:bg-muted/30 transition-colors">
                     <TableCell className="font-medium">{record.date}</TableCell>
                     { !isEmployee && (
@@ -141,16 +174,31 @@ export function AttendanceClient({ records, todayRecord, isEmployee }: { records
                     </TableCell>
                   </TableRow>
                 ))}
-                {records.length === 0 && (
+                {paginatedRecords.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={isEmployee ? 8 : 9} className="text-center py-10 text-muted-foreground italic">
-                      No attendance records found for this period.
+                      {filteredRecords.length === 0 
+                        ? "No attendance records found matching your search."
+                        : "No attendance records found for this period."
+                      }
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination */}
+          {filteredRecords.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={filteredRecords.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="calendar">

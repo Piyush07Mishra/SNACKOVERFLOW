@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Edit, Download, Trash2, AlertTriangle } from "lucide-react";
+import { Edit, Download, Trash2, AlertTriangle, Search } from "lucide-react";
 import { createEmployee, deleteEmployee } from "./actions";
 import { generateEmployeeReportPDF } from "@/lib/pdfGenerator";
 
@@ -20,6 +21,9 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<any>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -76,6 +80,25 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
     setEmployeeToDelete(employee);
     setDeleteDialogOpen(true);
   }
+
+  // Filter and pagination logic
+  const filteredEmployees = employees.filter(emp => 
+    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (emp.department && emp.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (emp.designation && emp.designation.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const totalPages = Math.ceil(filteredEmployees.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, pageSize]);
 
   return (
     <div className="space-y-4">
@@ -139,6 +162,17 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
         )}
       </div>
 
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+        <Input
+          placeholder="Search employees by name, email, role, department, or designation..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -152,7 +186,7 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
             </TableRow>
           </TableHeader>
           <TableBody>
-            {employees.map((emp) => (
+            {paginatedEmployees.map((emp) => (
               <TableRow key={emp.id}>
                 <TableCell className="font-medium">{emp.name}</TableCell>
                 <TableCell>{emp.email}</TableCell>
@@ -188,9 +222,34 @@ export function DirectoryClient({ employees, canManage }: { employees: any[], ca
                 )}
               </TableRow>
             ))}
+            {paginatedEmployees.length === 0 && (
+              <TableRow>
+                <TableCell 
+                  colSpan={canManage ? 6 : 5} 
+                  className="text-center py-10 text-muted-foreground italic"
+                >
+                  {filteredEmployees.length === 0 
+                    ? "No employees found matching your search."
+                    : "No employees to display."
+                  }
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {filteredEmployees.length > 0 && (
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredEmployees.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

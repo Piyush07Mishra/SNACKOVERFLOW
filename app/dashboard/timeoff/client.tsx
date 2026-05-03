@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,12 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { toast } from "sonner";
 import { applyForLeave, updateLeaveStatus } from "./actions";
 
 export function TimeOffClient({ requests, canApprove }: { requests: any[], canApprove: boolean }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,6 +49,26 @@ export function TimeOffClient({ requests, canApprove }: { requests: any[], canAp
       toast.error(err.message || "Failed to update leave");
     }
   }
+
+  // Filter and pagination logic
+  const filteredRequests = requests.filter(req => 
+    req.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    req.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    req.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    req.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    req.startDate.includes(searchTerm) ||
+    req.endDate.includes(searchTerm)
+  );
+
+  const totalPages = Math.ceil(filteredRequests.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedRequests = filteredRequests.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, pageSize]);
 
   return (
     <div className="space-y-4">
@@ -92,6 +116,16 @@ export function TimeOffClient({ requests, canApprove }: { requests: any[], canAp
         </Dialog>
       </div>
 
+      {/* Search Bar */}
+      <div className="relative">
+        <Input
+          placeholder="Search by employee name, type, reason, status, or date..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -105,7 +139,7 @@ export function TimeOffClient({ requests, canApprove }: { requests: any[], canAp
             </TableRow>
           </TableHeader>
           <TableBody>
-            {requests.map((req) => (
+            {paginatedRequests.map((req) => (
               <TableRow key={req.id}>
                 <TableCell className="font-medium">{req.userName}</TableCell>
                 <TableCell>{req.type}</TableCell>
@@ -128,16 +162,31 @@ export function TimeOffClient({ requests, canApprove }: { requests: any[], canAp
                 )}
               </TableRow>
             ))}
-            {requests.length === 0 && (
+            {paginatedRequests.length === 0 && (
               <TableRow>
                 <TableCell colSpan={canApprove ? 6 : 5} className="text-center py-4 text-muted-foreground">
-                  No time-off requests found.
+                  {filteredRequests.length === 0 
+                    ? "No time-off requests found matching your search."
+                    : "No time-off requests found."
+                  }
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {filteredRequests.length > 0 && (
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredRequests.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
     </div>
   );
 }

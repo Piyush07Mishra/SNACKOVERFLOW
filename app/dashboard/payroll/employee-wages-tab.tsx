@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Clock, Coffee, DollarSign } from "lucide-react";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { Input } from "@/components/ui/input";
+import { Loader2, Clock, Coffee, DollarSign, Search } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parse } from "date-fns";
 
 interface DailyRecord {
@@ -27,6 +29,9 @@ export function EmployeeWagesTab({ employee, currentMonth }: EmployeeWagesTabPro
   const [dailyRecords, setDailyRecords] = useState<DailyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     fetchDailyRecords();
@@ -79,6 +84,22 @@ export function EmployeeWagesTab({ employee, currentMonth }: EmployeeWagesTabPro
     const dateStr = format(date, 'yyyy-MM-dd');
     return dailyRecords.find(record => record.date === dateStr);
   };
+
+  // Filter and pagination logic
+  const filteredRecords = dailyRecords.filter(record => 
+    record.date.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.status.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredRecords.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedRecords = filteredRecords.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, pageSize]);
 
   const totalWages = dailyRecords.reduce((sum, record) => sum + record.wage, 0);
   const totalHours = dailyRecords.reduce((sum, record) => sum + record.totalWorkingHours, 0);
@@ -204,7 +225,18 @@ export function EmployeeWagesTab({ employee, currentMonth }: EmployeeWagesTabPro
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Daily Breakdown</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search by date or status..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
             <div className="max-h-96 overflow-y-auto">
               <Table>
                 <TableHeader className="sticky top-0 bg-background">
@@ -217,7 +249,7 @@ export function EmployeeWagesTab({ employee, currentMonth }: EmployeeWagesTabPro
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dailyRecords
+                  {paginatedRecords
                     .sort((a, b) => b.date.localeCompare(a.date))
                     .map((record) => (
                       <TableRow key={record.date} className="hover:bg-muted/50">
@@ -236,12 +268,17 @@ export function EmployeeWagesTab({ employee, currentMonth }: EmployeeWagesTabPro
                         </TableCell>
                       </TableRow>
                     ))}
-                  {dailyRecords.length === 0 && (
+                  {paginatedRecords.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         <div className="space-y-2">
                           <div className="text-lg">📅</div>
-                          <div>No attendance records found for {currentMonth}</div>
+                          <div>
+                            {filteredRecords.length === 0 
+                              ? "No records found matching your search."
+                              : `No attendance records found for ${currentMonth}`
+                            }
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -249,6 +286,18 @@ export function EmployeeWagesTab({ employee, currentMonth }: EmployeeWagesTabPro
                 </TableBody>
               </Table>
             </div>
+
+            {/* Pagination */}
+            {filteredRecords.length > 0 && (
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={filteredRecords.length}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
+            )}
           </CardContent>
         </Card>
       </div>

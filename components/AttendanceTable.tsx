@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Search, Filter, Eye, Edit2, Calendar } from "lucide-react";
 import { format } from 'date-fns';
 
@@ -41,6 +42,8 @@ export function AttendanceTable({
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Filter and sort records
   const filteredRecords = records
@@ -72,6 +75,17 @@ export function AttendanceTable({
         return aValue < bValue ? 1 : -1;
       }
     });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredRecords.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedRecords = filteredRecords.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, sortBy, sortOrder, pageSize]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -220,7 +234,7 @@ export function AttendanceTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRecords.map((record) => (
+                {paginatedRecords.map((record) => (
                   <TableRow key={record.id} className="hover:bg-muted/30 transition-colors">
                     <TableCell className="font-medium">{record.date}</TableCell>
                     {isAdmin && (
@@ -291,7 +305,7 @@ export function AttendanceTable({
                     )}
                   </TableRow>
                 ))}
-                {filteredRecords.length === 0 && (
+                {paginatedRecords.length === 0 && (
                   <TableRow>
                     <TableCell 
                       colSpan={isAdmin ? 10 : 7} 
@@ -304,6 +318,18 @@ export function AttendanceTable({
               </TableBody>
             </Table>
           </div>
+          
+          {/* Pagination */}
+          {filteredRecords.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={filteredRecords.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
