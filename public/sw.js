@@ -1,50 +1,170 @@
 const CACHE_NAME = 'empay-v1';
-const urlsToCache = [
+const STATIC_CACHE_NAME = 'empay-static-v1';
+const DYNAMIC_CACHE_NAME = 'empay-dynamic-v1';
+const API_CACHE_NAME = 'empay-api-v1';
+
+// Static assets to cache
+const STATIC_ASSETS = [
   '/',
   '/favicon.ico',
-  '/manifest.json'
+  '/manifest.json',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ];
 
-// Install event - cache resources
+// API endpoints to cache with network-first strategy
+const API_ENDPOINTS = [
+  '/api/auth/session',
+  '/api/notifications',
+  '/api/user/profile'
+];
+
+// Install event - cache static resources
 self.addEventListener('install', (event) => {
+  console.log('Service Worker: Installing...');
+  
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches.open(STATIC_CACHE_NAME)
       .then((cache) => {
-        return cache.addAll(urlsToCache);
+        console.log('Service Worker: Caching static assets');
+        return cache.addAll(STATIC_ASSETS);
       })
+      .then(() => self.skipWaiting())
   );
 });
 
-// Fetch event - serve from cache when offline
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-
-        return fetch(event.request).then(
-          (response) => {
-            // Check if valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone response since it can only be used once
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker: Activating...');
+  
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== STATIC_CACHE_NAME && 
+              cacheName !== DYNAMIC_CACHE_NAME && 
+              cacheName !== API_CACHE_NAME &&
+              cacheName !== CACHE_NAME) {
+            console.log('Service Worker: Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
           }
-        );
-      })
+        })
+      );
+    })
+    .then(() => self.clients.claim())
   );
+});
+
+// Network-first strategy for API calls
+const networkFirst = async (request) => {
+  try {
+    const networkResponse = await fetch(request);
+    
+    // Cache successful API responses
+    if (networkResponse.ok) {
+      const cache = await caches.open(API_CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.log('Service Worker: Network failed, trying cache:', request.url);
+    
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // Return offline fallback for specific API endpoints
+    if (request.url.includes('/api/')) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'Offline - Please check your internet connection',
+        offline: true
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    throw error;
+  }
+};
+
+// Cache-first strategy for static assets
+const cacheFirst = async (request) => {
+  const cachedResponse = await caches.match(request);
+  
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+  
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.log('Service Worker: Network failed for static asset:', request.url);
+    throw error;
+  }
+};
+
+// Stale-while-revalidate strategy for dynamic content
+const staleWhileRevalidate = async (request) => {
+  const cachedResponse = await caches.match(request);
+  
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.log('Service Worker: Network failed for dynamic content, using cache:', request.url);
+    return cachedResponse || new Response('Offline - Content not available', {
+      status: 503,
+      headers: { 'Content-Type': 'text/html' }
+    });
+  }
+};
+
+// Fetch event - handle different caching strategies
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  // Skip non-GET requests
+  if (request.method !== 'GET') {
+    return;
+  }
+  
+  // Handle different request types
+  if (url.pathname.startsWith('/api/')) {
+    // API calls - network first
+    event.respondWith(networkFirst(request));
+  } else if (STATIC_ASSETS.some(asset => url.pathname === asset) || 
+             url.pathname.startsWith('/icons/') ||
+             url.pathname.startsWith('/_next/static/') ||
+             url.pathname.includes('.woff') ||
+             url.pathname.includes('.woff2') ||
+             url.pathname.includes('.ttf')) {
+    // Static assets - cache first
+    event.respondWith(cacheFirst(request));
+  } else if (url.pathname.startsWith('/dashboard')) {
+    // Dynamic pages - stale while revalidate
+    event.respondWith(staleWhileRevalidate(request));
+  } else {
+    // Default - network first with cache fallback
+    event.respondWith(networkFirst(request));
+  }
 });
 
 // Push event - handle push notifications
