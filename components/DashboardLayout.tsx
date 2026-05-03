@@ -13,6 +13,7 @@ import { DicebearAvatar } from "./DicebearAvatar";
 import { NotificationCenter } from "./NotificationCenter";
 import { OfflineIndicator } from "./OfflineIndicator";
 import { PWAInstallButton } from "./PWAInstallButton";
+import { MobilePWAInstallPrompt } from "./MobilePWAInstallPrompt";
 
 interface User {
   id: string;
@@ -214,6 +215,12 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
           {children}
         </div>
       </main>
+
+      {/* Mobile PWA Install Prompt */}
+      <MobilePWAInstallPrompt />
+
+      {/* Mobile Install Banner */}
+      <PWAInstallBanner />
     </div>
   );
 }

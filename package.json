@@ -13,7 +13,9 @@
     "seed": "tsx scripts/addSampleData.ts",
     "seed-bulk": "tsx scripts/addBulkDataStandalone.ts",
     "test-pwa": "tsx scripts/testPWA.ts",
-    "create-icons": "tsx scripts/createSimpleIcons.ts"
+    "create-icons": "tsx scripts/createSimpleIcons.ts",
+    "create-mobile-icons": "tsx scripts/createMobileIcons.ts",
+    "test-mobile-pwa": "tsx scripts/testMobilePWA.ts"
   },
   "dependencies": {
     "@dicebear/core": "^9.4.2",
