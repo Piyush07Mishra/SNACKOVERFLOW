@@ -2,7 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import { Attendance } from "@/lib/models/Attendance";
 import { auth } from "@/auth";
 import { AttendanceClient } from "./client";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
 export default async function AttendancePage() {
   const session = await auth();
@@ -17,19 +17,23 @@ export default async function AttendancePage() {
 
   const isAdminOrOfficer = ["Admin", "HR_Officer", "Payroll_Officer"].includes(userRole);
 
+  // Show last 3 months of attendance data for all users
+  const startDate = format(startOfMonth(subMonths(new Date(), 2)), "yyyy-MM-dd");
+  const endDate = format(endOfMonth(new Date()), "yyyy-MM-dd");
+  
   if (isAdminOrOfficer) {
-    // Admin/Officers see attendance of all employees present on current day
-    attendanceRecords = await Attendance.find({ date: today })
+    // Admin/Officers see attendance of all employees for last 3 months
+    attendanceRecords = await Attendance.find({ 
+      date: { $gte: startDate, $lte: endDate }
+    })
       .populate("user", "name email employeeId")
+      .sort({ date: -1, "user.name": 1 })
       .lean();
   } else {
-    // Employees see day-wise attendance of themselves for ongoing month
-    const start = format(startOfMonth(new Date()), "yyyy-MM-dd");
-    const end = format(endOfMonth(new Date()), "yyyy-MM-dd");
-    
+    // Employees see their attendance for last 3 months
     attendanceRecords = await Attendance.find({ 
       user: userId,
-      date: { $gte: start, $lte: end }
+      date: { $gte: startDate, $lte: endDate }
     })
     .sort({ date: -1 })
     .lean();
@@ -70,8 +74,8 @@ export default async function AttendancePage() {
         <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
         <p className="text-muted-foreground">
           {isAdminOrOfficer 
-            ? "View employee attendance for today." 
-            : "Your attendance records for this month."}
+            ? "View employee attendance for the last 3 months." 
+            : "Your attendance records for the last 3 months."}
         </p>
       </div>
 
